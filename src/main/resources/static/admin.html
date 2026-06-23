@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>山岚食集 · 运营台</title>
+  <link rel="stylesheet" href="/assets/app.css?v=20260622-4">
+</head>
+<body>
+  <div id="login" class="login">
+    <form class="login-card" id="loginForm">
+      <div class="eyebrow">OPERATION CONSOLE</div>
+      <h1>登录运营台</h1>
+      <p id="loginMessage" class="auth-message hidden" role="alert"></p>
+      <div class="field"><label>用户名</label><input name="username" value="admin" autocomplete="username" required></div>
+      <div class="field"><label>密码</label><input type="password" name="password" value="123456" autocomplete="current-password" required></div>
+      <button class="btn primary" id="loginButton">进入系统</button>
+      <p class="notice">实验默认账号：admin / 123456</p>
+      <a class="btn home-link" href="/">回到主页</a>
+    </form>
+  </div>
+  <div id="app" class="shell hidden">
+    <aside class="sidebar">
+      <div class="brand">山岚食集<small>SKY LAB CONSOLE</small></div>
+      <nav>
+        <button class="active" data-view="dashboard">经营概览</button>
+        <button data-view="dishes">菜品管理</button>
+        <button data-view="categories">分类管理</button>
+        <button data-view="orders">订单管理</button>
+        <button id="export">导出运营报表</button>
+        <button id="logout">退出登录</button>
+        <a class="sidebar-link" href="/">回到主页</a>
+      </nav>
+    </aside>
+    <main class="content">
+      <div class="topline"><h1 id="title">经营概览</h1><span class="pill">● 店铺营业中</span></div>
+      <section id="view"></section>
+    </main>
+  </div>
+  <script src="/assets/admin.js?v=20260622-4"></script>
+</body>
+</html>

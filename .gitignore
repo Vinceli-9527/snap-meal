@@ -1,0 +1,9 @@
+/target/
+/.m2/
+/data/
+/uploads/
+/.idea/
+*.iml
+*.log
+/output/
+/.claude/

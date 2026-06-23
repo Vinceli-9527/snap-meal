@@ -1,0 +1,12 @@
+package com.snapmeal.user;
+import com.snapmeal.auth.AuthInterceptor; import com.snapmeal.common.*; import org.springframework.jdbc.core.JdbcTemplate; import org.springframework.web.bind.annotation.*; import javax.servlet.http.HttpServletRequest; import java.math.BigDecimal; import java.util.*;
+@RestController @RequestMapping("/api/user/addresses")
+public class AddressController {
+    private final JdbcTemplate jdbc;public AddressController(JdbcTemplate jdbc){this.jdbc=jdbc;} private long uid(HttpServletRequest r){return ((Number)r.getAttribute(AuthInterceptor.SUBJECT_ID)).longValue();}
+    @GetMapping public ApiResponse<List<Map<String,Object>>> list(HttpServletRequest r){return ApiResponse.ok(jdbc.queryForList("select * from address_book where user_id=? order by is_default desc,id desc",uid(r)));}
+    @PostMapping public ApiResponse<Void> add(HttpServletRequest req,@RequestBody Address r){jdbc.update("insert into address_book(user_id,consignee,sex,phone,province_name,city_name,district_name,detail,label,is_default,longitude,latitude) values(?,?,?,?,?,?,?,?,?,?,?,?)",uid(req),r.consignee,r.sex,r.phone,r.provinceName,r.cityName,r.districtName,r.detail,r.label,0,r.longitude,r.latitude);return ApiResponse.ok();}
+    @PutMapping("/{id}") public ApiResponse<Void> edit(HttpServletRequest req,@PathVariable long id,@RequestBody Address r){jdbc.update("update address_book set consignee=?,sex=?,phone=?,province_name=?,city_name=?,district_name=?,detail=?,label=?,longitude=?,latitude=? where id=? and user_id=?",r.consignee,r.sex,r.phone,r.provinceName,r.cityName,r.districtName,r.detail,r.label,r.longitude,r.latitude,id,uid(req));return ApiResponse.ok();}
+    @PutMapping("/{id}/default") public ApiResponse<Void> makeDefault(HttpServletRequest req,@PathVariable long id){long user=uid(req);jdbc.update("update address_book set is_default=0 where user_id=?",user);jdbc.update("update address_book set is_default=1 where id=? and user_id=?",id,user);return ApiResponse.ok();}
+    @DeleteMapping("/{id}") public ApiResponse<Void> delete(HttpServletRequest req,@PathVariable long id){jdbc.update("delete from address_book where id=? and user_id=?",id,uid(req));return ApiResponse.ok();}
+    public static class Address {public String consignee;public String sex;public String phone;public String provinceName;public String cityName;public String districtName;public String detail;public String label;public BigDecimal longitude;public BigDecimal latitude;}
+}
