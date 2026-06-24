@@ -1,0 +1,27 @@
+<view class="page">
+  <form bindsubmit="submit">
+    <view class="form card">
+      <view class="field">
+        <text>收货人</text>
+        <input name="consignee" placeholder="请输入收货人" />
+      </view>
+      <view class="field">
+        <text>手机号</text>
+        <input name="phone" type="number" maxlength="11" placeholder="请输入手机号" />
+      </view>
+      <view class="field">
+        <text>城市</text>
+        <input name="cityName" value="上海" />
+      </view>
+      <view class="field">
+        <text>区</text>
+        <input name="districtName" value="杨浦" />
+      </view>
+      <view class="field">
+        <text>详细地址</text>
+        <input name="detail" placeholder="街道、楼号、门牌号" />
+      </view>
+    </view>
+    <button class="primary-btn save" loading="{{saving}}" form-type="submit">保存地址</button>
+  </form>
+</view>

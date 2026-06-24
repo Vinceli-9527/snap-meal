@@ -1,0 +1,56 @@
+.checkout-page {
+  padding-bottom: 140rpx;
+}
+
+.address {
+  padding: 30rpx;
+  margin-bottom: 22rpx;
+}
+
+.address-name {
+  font-size: 30rpx;
+  font-weight: 800;
+}
+
+.address-detail {
+  margin-top: 14rpx;
+  color: #6f7680;
+  line-height: 1.5;
+}
+
+.empty-address {
+  color: #ff6b35;
+  font-weight: 800;
+}
+
+.summary {
+  padding: 28rpx;
+}
+
+.summary-title {
+  margin-bottom: 20rpx;
+  font-size: 32rpx;
+  font-weight: 900;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 14rpx 0;
+  color: #555;
+}
+
+.total-box {
+  display: flex;
+  justify-content: space-between;
+  padding: 32rpx 6rpx;
+  font-size: 34rpx;
+  font-weight: 900;
+}
+
+.submit {
+  position: fixed;
+  left: 28rpx;
+  right: 28rpx;
+  bottom: calc(28rpx + env(safe-area-inset-bottom));
+}

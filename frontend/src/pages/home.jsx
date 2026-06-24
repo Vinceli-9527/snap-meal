@@ -1,0 +1,49 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import '../styles.css';
+
+function HomePage() {
+  return (
+    <>
+      <main>
+        <div className="eyebrow">SNAP-MEAL · JAVA SOFTWARE STUDIO</div>
+        <h1>
+          一套餐饮系统，
+          <br />
+          <em>两种工作视角。</em>
+        </h1>
+        <p>
+          从商品管理到用户下单，从模拟微信支付到运营数据导出。默认零配置运行，也可以切换到 MySQL 和真实云服务。
+        </p>
+        <nav>
+          <a className="primary" href="/admin.html">
+            进入运营管理端 <span>→</span>
+          </a>
+          <a href="/user.html">
+            打开用户点餐端 <span>↗</span>
+          </a>
+        </nav>
+        <section>
+          <article>
+            <b>01</b>
+            <h2>管理端</h2>
+            <p>商品、套餐、订单、店铺状态和经营指标。</p>
+          </article>
+          <article>
+            <b>02</b>
+            <h2>用户端</h2>
+            <p>浏览菜单、购物车、地址、下单与支付。</p>
+          </article>
+          <article>
+            <b>03</b>
+            <h2>实验适配</h2>
+            <p>OSS、微信与支付均提供可替换适配层。</p>
+          </article>
+        </section>
+      </main>
+      <div className="orb" />
+    </>
+  );
+}
+
+createRoot(document.getElementById('root')).render(<HomePage />);

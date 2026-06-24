@@ -1,327 +1,270 @@
-# Snap Meal 外卖系统部署与试用手册
+# Snap Meal 外卖系统
 
-Snap Meal 是依据“Java 软件开发实战”课程要求构建的外卖业务演示系统，包含首页、运营管理端和用户点餐端。
+Snap Meal 是一个用于 Java 软件开发实战课程的外卖业务示例项目。项目包含 Spring Boot 后端、React 管理端、React Web 用户点餐端和微信小程序用户端，并集成 H2/MySQL、Swagger/OpenAPI、ECharts、Excel 报表导出、Redis 可选 token 存储和 OSS 可选上传能力。
 
-本手册主要面向第一次接触 Java 项目的试用者。按照“默认部署”章节逐步操作，不需要了解编程，也不需要安装 MySQL、Redis、Node.js、微信开发者工具或阿里云 OSS。
+当前项目名称统一为 `snap-meal`。
 
-## 1. 系统包含什么
+## 功能概览
 
-- 运营管理端：管理员登录、分类管理、菜品管理、套餐管理、订单处理、经营统计和 Excel 报表导出。
-- 用户点餐端：模拟手机号码登录、模拟微信登录、浏览菜品、购物车、地址簿、下单和模拟支付。
-- 本地数据存储：默认使用内置 H2 数据库，关闭程序后数据不会丢失。
-- 本地文件存储：上传的图片默认保存在项目的 `uploads` 目录。
+- 管理端：管理员登录、分类管理、菜品管理、订单管理、经营概览、ECharts 图表仪表盘、Excel 报表导出。
+- Web 用户端：模拟手机号登录、模拟微信登录、分类浏览、菜品列表、购物车明细、数量调整、地址管理、下单和模拟支付。
+- 微信小程序用户端：登录、分类菜品浏览、加购物车、地址管理、结算、模拟支付、订单列表。
+- 后端能力：统一 REST API、token 鉴权、H2/MySQL 数据库、购物车数量调整、阿里云 OSS 可选上传、Redis 可选 token 存储、Swagger/OpenAPI 文档。
+- 实验材料：版本归档、实验报告、外部工具使用文档、Postman Collection 模板。
 
-当前微信登录、微信支付和阿里云 OSS 均为教学模拟模式，不会发送短信、唤起真实微信支付或上传文件到云端。
+## v0.1.2 更新重点
 
-## 2. 部署前准备
+v0.1.2 主要强化 Web 用户点餐端的交互体验：
 
-### 2.1 必须准备的环境
+- 分类导航改造为 Dock 风格交互：支持横向滑动、选中态滑块、鼠标靠近放大和键盘聚焦反馈。
+- 菜品列表接入 AnimatedList：滚动时菜品卡片以弹簧式滑入，带顶部/底部渐隐提示和键盘方向键滚动定位。
+- 加购物车反馈增强：点击 `+` 成功后按钮短暂变为 `✓`，菜品图片轻跳，并显示飞向购物车栏的小圆点；失败时按钮变红并抖动。
+- 底部购物车新增展开面板：点击购物车信息区域可展开当前已选菜品，支持查看菜名、单价、数量、小计和合计。
+- 购物车面板支持真实增减逻辑：`+` 调用加购接口，`-` 调用数量更新接口；数量减到 0 时自动移除该项。
+- 用户端 React 源码整理为 UTF-8，修复历史中文乱码对维护和构建的影响。
 
-| 项目 | 要求 | 用途 |
-| --- | --- | --- |
-| 操作系统 | Windows 10 或 Windows 11，64 位 | 本手册中的命令均以 Windows 为例 |
-| JDK | JDK 8，推荐 Eclipse Temurin 8 | 编译和运行 Java 程序 |
-| Maven | 3.6 或更高版本 | 下载依赖、测试和启动项目 |
-| 浏览器 | Edge、Chrome 或 Firefox | 访问系统页面 |
-| 网络 | 第一次构建时需要联网 | 下载 Maven 依赖，后续通常可以离线运行 |
-| 端口 | 默认使用 8080 | 浏览器通过该端口访问系统 |
+## 技术栈
 
-请注意：必须安装 **JDK**，不能只有 JRE。判断标准是 `java` 和 `javac` 两条命令都必须可用。
+| 模块 | 技术 |
+| --- | --- |
+| 后端 | Spring Boot 2.7.18、Spring JDBC、H2、MySQL、Apache POI |
+| 前端 | React 19、Vite、多页面构建、motion |
+| 管理端图表 | ECharts 5.5.0 |
+| API 文档 | springdoc-openapi-ui 1.7.0 |
+| 缓存 | Redis，可选启用 |
+| 文件存储 | 本地 uploads 目录，或阿里云 OSS |
+| 小程序 | 微信小程序原生 WXML/WXSS/JS |
+| 构建工具 | Maven、npm |
 
-### 2.2 默认部署不需要安装的内容
-
-- MySQL
-- Redis
-- Nginx
-- Node.js 或 npm
-- 微信开发者工具
-- 阿里云 OSS
-- Cpolar
-
-如果只是本机试用或课程验收，请直接使用默认部署方式。
-
-## 3. 检查 Java 和 Maven
-
-### 3.1 打开 PowerShell
-
-按下 `Win + R`，输入：
+## 目录结构
 
 ```text
-powershell
+sky-lab/
+  src/main/java/com/snapmeal/       Spring Boot 后端源码
+  src/main/resources/               后端配置、SQL、静态构建产物
+  frontend/                         React + Vite 前端源码
+  miniprogram/                      微信小程序用户端
+  docs/                             实验和外部工具文档
+  output/                           实验报告、Postman 模板、截图材料
+  releases/v0.1.0/                 v0.1.0 源码归档
+  releases/v0.1.2/                 v0.1.2 源码归档
+  package.json                      根目录前端构建代理脚本
+  pom.xml                           Maven 后端配置
+  maven-settings.xml                Maven 镜像配置
 ```
 
-按回车打开蓝色或黑色命令窗口。
+## 环境要求
 
-### 3.2 检查 JDK
+| 环境 | 要求 |
+| --- | --- |
+| JDK | JDK 8 |
+| Maven | 3.6 或更高 |
+| Node.js/npm | 修改 React 前端时需要 |
+| 浏览器 | Edge、Chrome 或 Firefox |
+| 微信开发者工具 | 运行 `miniprogram/` 时需要 |
+| MySQL | 可选，默认使用 H2 |
+| Redis | 可选，默认使用内存 token |
 
-依次执行：
+检查 Java 和 Maven：
 
 ```powershell
 java -version
 javac -version
-```
-
-两条命令都应该显示版本号，例如：
-
-```text
-java version "1.8.0_492"
-javac 1.8.0_492
-```
-
-如果 `java -version` 正常，但 `javac -version` 提示未找到命令，说明当前只有 JRE，需要安装完整 JDK。
-
-### 3.3 检查 Maven
-
-执行：
-
-```powershell
 mvn -version
 ```
 
-应看到 Maven 版本和 Java 信息。重点检查 `Java home`，它必须指向 JDK，例如：
+## 快速启动
 
-```text
-Java home: C:\Program Files\Eclipse Adoptium\jdk-8.0.492.9-hotspot\jre
-```
-
-某些 Maven 版本会显示 `runtime` 而不是 `Java home`。路径末尾出现 `\jre` 并不一定有问题；只要它位于 `jdk-...-hotspot` 目录内部，并且 `javac -version` 正常即可。
-
-如果 `Java home` 指向旧 JRE，可以先在当前 PowerShell 临时修正。请将路径改成电脑上的实际 JDK 目录：
+进入项目根目录：
 
 ```powershell
-$env:JAVA_HOME="C:\Program Files\Eclipse Adoptium\jdk-8.0.492.9-hotspot"
-$env:Path="$env:JAVA_HOME\bin;$env:Path"
+cd "C:\Users\Vince\Desktop\java\sky-lab"
 ```
 
-然后重新执行：
-
-```powershell
-javac -version
-mvn -version
-```
-
-如果不知道 JDK 安装位置，可以执行：
-
-```powershell
-Get-ChildItem "C:\Program Files\Eclipse Adoptium" -Directory
-```
-
-## 4. 默认部署：无需安装数据库
-
-### 第一步：进入项目目录
-
-本项目根目录中应该能看到 `pom.xml`、`README.md` 和 `maven-settings.xml`。
-
-假设项目位于 `C:\Users\Vince\Desktop\java\snap-meal`，在 PowerShell 执行：
-
-```powershell
-cd "C:\Users\Vince\Desktop\java\snap-meal"
-```
-
-如果项目放在其他位置，请替换成实际路径。
-
-执行下面的命令确认位置正确：
-
-```powershell
-Get-ChildItem pom.xml,maven-settings.xml
-```
-
-如果能看到两个文件，说明目录正确。
-
-### 第二步：下载依赖并执行自动测试
-
-执行：
+运行后端测试：
 
 ```powershell
 mvn -s maven-settings.xml clean test
 ```
 
-第一次执行可能需要几分钟，因为 Maven 需要联网下载依赖。下载文件会保存在项目的 `.m2` 目录。
-
-看到以下内容表示构建和测试成功：
-
-```text
-BUILD SUCCESS
-Tests run: 6, Failures: 0, Errors: 0
-```
-
-如果这里出现错误，请先查看本文末尾的“常见问题”。
-
-### 第三步：启动系统
-
-执行：
+启动项目：
 
 ```powershell
 mvn -s maven-settings.xml spring-boot:run
 ```
 
-启动过程中不要关闭 PowerShell。看到类似以下内容表示启动成功：
+启动成功后访问：
+
+| 页面 | 地址 |
+| --- | --- |
+| 首页 | http://localhost:8080/ |
+| 管理端 | http://localhost:8080/admin.html |
+| Web 用户端 | http://localhost:8080/user.html |
+| Swagger | http://localhost:8080/swagger-ui.html |
+| OpenAPI JSON | http://localhost:8080/api-docs |
+
+默认管理端账号：
 
 ```text
-Started SnapMealApplication
+username: admin
+password: 123456
 ```
 
-### 第四步：打开系统
+## 前端开发
 
-在浏览器地址栏分别访问：
+安装依赖：
 
-| 页面 | 地址 | 说明 |
+```powershell
+npm install --prefix frontend
+```
+
+启动 Vite 开发服务器：
+
+```powershell
+npm run dev --prefix frontend
+```
+
+构建 React 前端并输出到 Spring Boot 静态目录：
+
+```powershell
+npm run build --prefix frontend
+```
+
+也可以使用根目录代理脚本：
+
+```powershell
+npm run build
+```
+
+构建输出位置：
+
+```text
+src/main/resources/static/
+```
+
+说明：Spring Boot 运行时直接读取 `src/main/resources/static` 下的构建产物，因此修改 React 源码后需要重新执行 `npm run build`。
+
+## Web 用户端交互说明
+
+用户端地址：
+
+```text
+http://localhost:8080/user.html
+```
+
+主要流程：
+
+```text
+登录 -> 浏览分类 -> 浏览菜品 -> 加入购物车 -> 调整购物车 -> 添加地址 -> 结算 -> 模拟支付
+```
+
+交互细节：
+
+- 分类导航支持横向滚动和 Dock 式放大。
+- 菜品列表滚动时有弹簧式滑入效果。
+- 点击菜品 `+` 后会播放成功反馈并刷新购物车。
+- 点击底部购物车栏左侧信息区域会展开购物车面板。
+- 购物车面板中可通过 `+` / `-` 调整数量，减到 0 时自动移除。
+- `去结算` 按钮保留直接结算行为。
+
+## 微信小程序
+
+小程序项目目录：
+
+```text
+miniprogram/
+```
+
+使用方式：
+
+1. 启动后端，确保 `http://localhost:8080` 可访问。
+2. 打开微信开发者工具。
+3. 选择导入项目，目录选择 `sky-lab/miniprogram`。
+4. 如果本地调试 HTTP 接口，需要在微信开发者工具中关闭合法域名校验。
+
+小程序全局后端地址位于：
+
+```text
+miniprogram/app.js
+```
+
+默认值：
+
+```javascript
+baseUrl: 'http://localhost:8080'
+```
+
+## 后端配置
+
+主配置文件：
+
+```text
+src/main/resources/application.yml
+```
+
+默认模式可零配置启动：
+
+- 数据库：H2 文件数据库
+- 文件上传：本地 `uploads/`
+- Redis：内存模式
+- 微信登录：模拟模式
+- 支付：模拟模式
+
+### 常用环境变量
+
+| 变量 | 默认值 | 说明 |
 | --- | --- | --- |
-| 系统首页 | <http://localhost:8080/> | 对应项目中的 `index.html` |
-| 运营管理端 | <http://localhost:8080/admin.html> | 首次进入需要管理员登录 |
-| 用户点餐端 | <http://localhost:8080/user.html> | 首次进入需要选择模拟登录方式 |
+| `SERVER_PORT` | `8080` | 服务端口 |
+| `TOKEN_SECRET` | 教学默认值 | token 签名密钥 |
+| `REDIS_MODE` | `memory` | `memory` 或 `redis` |
+| `REDIS_HOST` | `localhost` | Redis 地址 |
+| `REDIS_PORT` | `6379` | Redis 端口 |
+| `REDIS_PASSWORD` | 空 | Redis 密码 |
+| `OSS_MODE` | `local` | `local` 或 `oss` |
+| `OSS_ENDPOINT` | 空 | 阿里云 OSS endpoint |
+| `OSS_ACCESS_KEY_ID` | 空 | 阿里云 AccessKey ID |
+| `OSS_ACCESS_KEY_SECRET` | 空 | 阿里云 AccessKey Secret |
+| `OSS_BUCKET_NAME` | 空 | OSS bucket |
 
-管理端默认账号：
+### 切换 Redis
 
-```text
-用户名：admin
-密码：123456
-```
-
-用户端登录方式：
-
-- 手机号码登录：输入任意非空手机号码，登录后显示“手机体验用户”。
-- 微信登录：不调用真实微信，登录后显示“微信体验用户”。
-
-### 第五步：停止系统
-
-回到正在运行程序的 PowerShell 窗口，按下：
-
-```text
-Ctrl + C
-```
-
-出现是否终止的询问时，输入 `Y` 并回车。停止后浏览器将无法继续访问系统。
-
-## 5. 推荐试用流程
-
-### 5.1 用户下单
-
-1. 打开系统首页。
-2. 点击“打开用户点餐端”。
-3. 选择“手机号码登录”或“微信登录”。
-4. 选择分类和菜品，点击 `+` 加入购物车。
-5. 点击“去结算”。
-6. 第一次结算时填写收货人、手机号和地址。
-7. 提交订单，系统会自动完成模拟支付。
-
-### 5.2 管理端处理订单
-
-1. 回到系统首页。
-2. 点击“进入运营管理端”。
-3. 使用 `admin / 123456` 登录。
-4. 打开“订单管理”。
-5. 按订单状态依次执行“接单”“派送”“完成”。
-6. 在“经营概览”查看统计数据。
-7. 点击“导出运营报表”下载 Excel 文件。
-8. 点击“退出登录”后，后端会立即撤销当前登录状态；原令牌无法再次使用。
-
-## 6. 数据保存、备份和重置
-
-### 6.1 数据保存位置
-
-默认数据库文件位于：
-
-```text
-data\snap-meal.mv.db
-```
-
-上传图片位于：
-
-```text
-uploads\
-```
-
-登录会话、用户、购物车、订单和管理数据都保存在数据库中。正常停止或重启程序不会清空数据。
-
-### 6.2 备份数据
-
-1. 先按 `Ctrl + C` 停止系统。
-2. 复制整个 `data` 目录到安全位置。
-3. 如果需要保留上传图片，同时复制 `uploads` 目录。
-
-不要在程序运行时复制或移动数据库文件，否则可能得到不完整的备份。
-
-### 6.3 恢复为全新数据
-
-该操作会清除用户、购物车、订单和登录记录，请先备份。
-
-1. 停止系统。
-2. 将项目中的 `data` 目录改名为 `data-backup`。
-3. 重新启动系统。
-
-程序会自动创建新的数据库和演示数据。确认新数据库正常后，再决定是否删除 `data-backup`。
-
-## 7. 构建独立运行包
-
-如果不想每次都通过 Maven 启动，可以先生成一个可运行的 JAR 文件。
-
-### 7.1 生成 JAR
-
-在项目根目录执行：
+默认不依赖 Redis。需要启用 Redis 时：
 
 ```powershell
-mvn -s maven-settings.xml clean package
-```
-
-看到 `BUILD SUCCESS` 后，会生成：
-
-```text
-target\snap-meal-1.0.0.jar
-```
-
-### 7.2 运行 JAR
-
-执行：
-
-```powershell
-java -jar target\snap-meal-1.0.0.jar
-```
-
-看到 `Started SnapMealApplication` 后，仍然通过 <http://localhost:8080/> 访问。
-
-停止方式仍然是 `Ctrl + C`。
-
-## 8. 修改端口
-
-如果启动时提示 `Port 8080 was already in use`，说明8080端口已被其他程序占用。
-
-可以临时改用8090端口：
-
-```powershell
-$env:SERVER_PORT="8090"
+$env:REDIS_MODE="redis"
+$env:REDIS_HOST="localhost"
+$env:REDIS_PORT="6379"
 mvn -s maven-settings.xml spring-boot:run
 ```
 
-然后访问：
+Redis 不可用时，token 会自动降级到内存和数据库兼容逻辑，不阻止项目启动。
 
-```text
-http://localhost:8090/
+### 切换阿里云 OSS
+
+默认上传到本地 `uploads/`。需要启用 OSS 时：
+
+```powershell
+$env:OSS_MODE="oss"
+$env:OSS_ENDPOINT="https://oss-cn-shanghai.aliyuncs.com"
+$env:OSS_ACCESS_KEY_ID="你的AccessKeyId"
+$env:OSS_ACCESS_KEY_SECRET="你的AccessKeySecret"
+$env:OSS_BUCKET_NAME="你的BucketName"
+mvn -s maven-settings.xml spring-boot:run
 ```
 
-关闭当前 PowerShell 后，该临时端口设置会自动失效。
+不要把真实密钥写入仓库文件。
 
-## 9. 可选：切换到 MySQL
+## MySQL 可选配置
 
-本节不是首次试用的必需步骤。只有明确要求使用 MySQL 时才需要操作。
+默认使用 H2，不需要安装 MySQL。需要切换到 MySQL 时：
 
-### 9.1 准备 MySQL
-
-- 安装并启动 MySQL 8。
-- 记住 `root` 用户的密码。
-- 使用 MySQL Workbench 或其他数据库工具连接 MySQL。
-
-执行以下 SQL 创建数据库：
+1. 创建数据库：
 
 ```sql
-CREATE DATABASE sky_take_out
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE sky_take_out CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-### 9.2 设置 MySQL 参数
-
-在启动项目的同一个 PowerShell 窗口执行：
+2. 设置环境变量：
 
 ```powershell
 $env:SPRING_PROFILES_ACTIVE="mysql"
@@ -330,114 +273,174 @@ $env:MYSQL_PORT="3306"
 $env:MYSQL_DATABASE="sky_take_out"
 $env:MYSQL_USERNAME="root"
 $env:MYSQL_PASSWORD="你的MySQL密码"
-```
-
-然后启动：
-
-```powershell
 mvn -s maven-settings.xml spring-boot:run
 ```
 
-程序会自动创建数据表和基础演示数据。不要把真实数据库密码写入 `application-mysql.yml` 或提交到版本管理系统。
-
-如果需要恢复默认 H2 模式，请关闭当前 PowerShell，重新打开后直接运行默认启动命令。
-
-## 10. 环境变量说明
-
-| 环境变量 | 默认值 | 作用 |
-| --- | --- | --- |
-| `SERVER_PORT` | `8080` | Web 服务端口 |
-| `TOKEN_SECRET` | 内置教学密钥 | 登录令牌签名密钥，公开部署时必须修改 |
-| `SPRING_PROFILES_ACTIVE` | 默认模式 | 设置为 `mysql` 时启用 MySQL |
-| `MYSQL_HOST` | `localhost` | MySQL 地址 |
-| `MYSQL_PORT` | `3306` | MySQL 端口 |
-| `MYSQL_DATABASE` | `sky_take_out` | MySQL 数据库名 |
-| `MYSQL_USERNAME` | `root` | MySQL 用户名 |
-| `MYSQL_PASSWORD` | `root` | MySQL 密码 |
-
-## 11. 常见问题
-
-### 11.1 提示“没有编译器”或 `No compiler is provided`
-
-原因：Maven 使用了 JRE，而不是 JDK。
-
-处理步骤：
-
-1. 执行 `javac -version`，确认命令存在。
-2. 执行 `mvn -version`，检查 `Java home`。
-3. 按照本文第3节重新设置 `JAVA_HOME`。
-4. 关闭并重新打开 PowerShell 后再次启动。
-
-### 11.2 提示无法找到 `mvn`
-
-原因：Maven 未安装，或者 Maven 的 `bin` 目录没有加入系统 `Path`。
-
-处理方式：安装 Maven 3.6或更高版本，将其 `bin` 目录加入 `Path`，重新打开 PowerShell，再执行 `mvn -version`。
-
-### 11.3 Maven 下载依赖失败
-
-确认电脑可以访问网络，然后重新执行：
-
-```powershell
-mvn -s maven-settings.xml clean test
-```
-
-项目自带的 `maven-settings.xml` 已配置公共 Maven 镜像，因此不要省略 `-s maven-settings.xml`。
-
-### 11.4 登录状态无效或已过期
-
-管理端可直接打开：
+MySQL 配置文件：
 
 ```text
-http://localhost:8080/admin.html?logout=1
+src/main/resources/application-mysql.yml
 ```
 
-该地址会清除浏览器中的旧管理端令牌，并显示登录页。
+## API 认证规则
 
-用户端出现相同问题时，刷新 `user.html`，页面会自动清除失效令牌并重新显示登录方式选择。
+统一返回格式：
 
-### 11.5 页面仍显示旧内容
+```json
+{
+  "success": true,
+  "message": "操作成功",
+  "data": {}
+}
+```
 
-1. 确认已经停止并重新启动后端。
-2. 在浏览器按 `Ctrl + F5` 强制刷新。
-3. 如果仍未更新，关闭当前页面后重新打开。
+请求头：
 
-### 11.6 中文显示乱码
+| 端 | Header |
+| --- | --- |
+| 管理端 | `token` |
+| 用户端 | `authentication` |
 
-项目已经统一使用 UTF-8。出现乱码时先重启系统，然后按 `Ctrl + F5` 刷新浏览器。不要使用记事本以 ANSI 或 GBK 编码保存项目文件。
+常用接口：
 
-### 11.7 数据库被占用或无法打开
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `POST` | `/api/admin/auth/login` | 管理员登录 |
+| `GET` | `/api/admin/reports/overview` | 经营概览 |
+| `GET` | `/api/admin/reports/turnover` | 营业额统计 |
+| `GET` | `/api/admin/reports/sales-top10` | 销量排行 |
+| `GET` | `/api/admin/reports/export` | 导出 Excel |
+| `POST` | `/api/user/auth/login` | 用户登录 |
+| `GET` | `/api/user/catalog/categories` | 分类列表 |
+| `GET` | `/api/user/catalog/dishes?categoryId=1` | 菜品列表 |
+| `POST` | `/api/user/cart/items` | 添加购物车 |
+| `GET` | `/api/user/cart` | 查看购物车 |
+| `PATCH` | `/api/user/cart/items/{id}?number=2` | 设置购物车项数量，数量小于等于 0 时删除 |
+| `DELETE` | `/api/user/cart` | 清空购物车 |
+| `POST` | `/api/user/addresses` | 新增地址 |
+| `POST` | `/api/user/orders` | 提交订单 |
+| `POST` | `/api/user/orders/{id}/pay` | 模拟支付 |
 
-通常是同时启动了多个 Snap Meal 实例。关闭所有正在运行项目的 PowerShell 窗口，只保留一个实例，再重新启动。
+## 经营概览图表
 
-### 11.8 8080端口被占用
+管理端“经营概览”页面使用 ECharts 展示：
 
-按照本文第8节将端口临时修改为8090，或者关闭占用8080端口的程序。
+- 4 个数字卡片：营业额、有效订单、注册用户、待接单。
+- 近 7 日营业额折线图。
+- 菜品销量 Top10 横向柱状图。
 
-## 12. 对外部署前的安全提醒
+相关文件：
 
-当前系统用于本地实验和教学演示，不应直接暴露到互联网。对外部署前至少需要完成：
+```text
+frontend/public/echarts-dashboard.js
+src/main/resources/static/echarts-dashboard.js
+frontend/src/pages/admin.jsx
+```
 
-- 修改默认管理员密码，并改用安全的密码散列存储。
-- 设置足够长且随机的 `TOKEN_SECRET`。
-- 使用 HTTPS。
-- 限制文件上传类型和访问权限。
-- 配置正式 MySQL 账号，不使用 `root`。
-- 接入真实微信、支付或 OSS 时，通过环境变量或密钥管理服务保存凭证。
-- 增加日志、备份、监控和访问频率限制。
+图表数据来自真实后端 API：
 
-## 13. 部署完成检查表
+```text
+/api/admin/reports/overview
+/api/admin/reports/turnover
+/api/admin/reports/sales-top10
+```
 
-完成部署后逐项确认：
+## 实验材料
 
-- [ ] `java -version` 有版本输出。
-- [ ] `javac -version` 有版本输出。
-- [ ] `mvn -version` 中的 Java home 指向 JDK。
-- [ ] `mvn -s maven-settings.xml clean test` 显示 `BUILD SUCCESS`。
-- [ ] 启动日志出现 `Started SnapMealApplication`。
-- [ ] 首页可以打开。
-- [ ] 管理端可以使用 `admin / 123456` 登录。
-- [ ] 用户端可以选择手机号码或微信模拟登录。
-- [ ] 用户可以完成加入购物车和模拟支付。
-- [ ] 管理端可以处理订单并导出 Excel。
-- [ ] 退出管理端后，原登录状态立即失效。
+| 内容 | 位置 |
+| --- | --- |
+| 新版实验报告 | `output/snap-meal-report-v2.docx` |
+| 外部工具实验文档 | `docs/external-tools-experiments.md` |
+| Postman Collection | `output/SnapMeal.postman_collection.json` |
+| 截图说明 | `output/experiment-screenshots/README.md` |
+| 版本归档 | `releases/` |
+
+外部工具实验文档覆盖：
+
+- 实验 7：MySQL Workbench 建表
+- 实验 8：Apifox 接口文档管理
+- 实验 9：Swagger + Postman 接口测试
+- 实验 10：Cpolar 内网穿透
+
+## 版本归档
+
+当前已保存版本：
+
+```text
+releases/v0.1.0/snap-meal-v0.1.0-source-20260623.zip
+releases/v0.1.0/snap-meal-v0.1.0-source-20260623.sha256.txt
+releases/v0.1.0/RELEASE.md
+
+releases/v0.1.2/snap-meal-v0.1.2-source-20260625.zip
+releases/v0.1.2/snap-meal-v0.1.2-source-20260625.sha256.txt
+releases/v0.1.2/RELEASE.md
+```
+
+归档为源码快照，不包含本地依赖、运行期数据库、构建缓存和日志。
+
+## 常见问题
+
+### npm run build 提示 Missing script: build
+
+确认命令在项目根目录执行，并且根目录存在 `package.json`。当前根目录脚本会代理到 `frontend`：
+
+```powershell
+npm run build
+```
+
+### 8080 端口被占用
+
+临时改用 8090：
+
+```powershell
+$env:SERVER_PORT="8090"
+mvn -s maven-settings.xml spring-boot:run
+```
+
+访问：
+
+```text
+http://localhost:8090/
+```
+
+### Swagger 打不开
+
+先确认后端启动成功，再访问：
+
+```text
+http://localhost:8080/swagger-ui.html
+```
+
+如果端口改为 8090，则对应访问：
+
+```text
+http://localhost:8090/swagger-ui.html
+```
+
+### 小程序请求失败
+
+检查：
+
+1. 后端是否运行在 `localhost:8080`。
+2. 微信开发者工具是否关闭合法域名校验。
+3. `miniprogram/app.js` 中的 `baseUrl` 是否正确。
+4. 需要登录的接口是否已经获取并保存 token。
+
+### 中文显示乱码
+
+项目文件应使用 UTF-8。不要使用 ANSI 或 GBK 编码保存源文件。PowerShell 输出乱码通常不代表文件本身损坏，可用 VS Code 或 IntelliJ IDEA 以 UTF-8 打开确认。
+
+## 验收检查
+
+- [ ] `mvn -s maven-settings.xml clean test` 通过。
+- [ ] `npm run build` 成功。
+- [ ] `http://localhost:8080/` 能打开首页。
+- [ ] 管理端可使用 `admin / 123456` 登录。
+- [ ] 管理端“经营概览”显示 ECharts 图表。
+- [ ] 管理端可导出运营报表。
+- [ ] Web 用户端可登录、浏览分类和菜品。
+- [ ] Web 用户端可加入购物车、展开购物车面板并调整数量。
+- [ ] Web 用户端可完成下单和模拟支付。
+- [ ] 微信小程序可完成登录、加购物车、添加地址、结算、支付、查看订单。
+- [ ] `http://localhost:8080/swagger-ui.html` 可查看 API 文档。
+- [ ] Postman Collection 可导入并运行核心下单流程。

@@ -1,0 +1,111 @@
+.dock-outer {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 10px 0 14px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.dock-outer::-webkit-scrollbar {
+  display: none;
+}
+
+.dock-panel {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 10px;
+  min-width: max-content;
+  padding: 8px;
+  border: 1px solid rgba(24, 33, 27, .12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .72);
+  box-shadow: 0 12px 28px rgba(24, 33, 27, .08);
+}
+
+.dock-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 0 12px;
+  border: 1px solid #bfc3ba;
+  border-radius: 999px;
+  background: #fbfaf5;
+  color: var(--ink);
+  cursor: pointer;
+  outline: none;
+  box-shadow: 0 2px 0 rgba(24, 33, 27, .04);
+  transform-origin: center;
+  will-change: transform;
+  transition:
+    background-color 180ms cubic-bezier(.22, 1, .36, 1),
+    border-color 180ms cubic-bezier(.22, 1, .36, 1),
+    color 180ms cubic-bezier(.22, 1, .36, 1),
+    transform 120ms cubic-bezier(.22, 1, .36, 1),
+    box-shadow 180ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.dock-item:hover,
+.dock-item:focus-visible {
+  z-index: 2;
+  border-color: var(--moss);
+  box-shadow: 0 9px 18px rgba(49, 89, 67, .14);
+}
+
+.dock-item:focus-visible {
+  outline: 2px solid rgba(215, 240, 107, .75);
+  outline-offset: 2px;
+}
+
+.dock-item.active {
+  border-color: var(--ink);
+  color: white;
+}
+
+.dock-item:active {
+  transform: scale(.96);
+}
+
+.dock-icon {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dock-active-indicator {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--ink);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06);
+}
+
+@media (hover: none) {
+  .dock-panel {
+    display: flex;
+    gap: 8px;
+    width: max-content;
+  }
+
+  .dock-item {
+    width: auto !important;
+    min-width: 68px;
+    padding: 0 13px;
+  }
+
+  .dock-icon {
+    font-size: 12px;
+  }
+
+}

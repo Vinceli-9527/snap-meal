@@ -1,40 +1,17 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>山岚食集 · 点餐</title>
-  <link rel="stylesheet" href="/assets/app.css?v=20260622-4">
-</head>
-<body class="user-page">
-  <section id="userLogin" class="user-auth">
-    <div class="user-auth-card">
-      <a class="text-link" href="/">← 回到主页</a>
-      <div class="user-auth-brand">山岚食集</div>
-      <h1>选择登录方式</h1>
-      <p>本页面使用模拟账户，不会发起短信验证或真实微信授权。</p>
-      <p id="userLoginMessage" class="auth-message hidden" role="alert"></p>
-      <div class="login-methods">
-        <button id="choosePhone" class="login-method" type="button"><strong>手机号码登录</strong><span>输入任意手机号码</span></button>
-        <button id="wechatLogin" class="login-method" type="button"><strong>微信登录</strong><span>使用“微信体验用户”</span></button>
-      </div>
-      <form id="phoneLoginForm" class="phone-login hidden">
-        <div class="field"><label>手机号码</label><input name="phone" type="tel" autocomplete="tel" placeholder="请输入任意手机号码" required></div>
-        <button class="btn primary" id="phoneLoginButton">以手机体验用户登录</button>
-      </form>
-    </div>
-  </section>
-  <div id="userApp" class="mobile hidden">
-    <header>
-      <div class="user-account"><div><span id="userNickname"></span><small id="userLoginMethod"></small></div><a href="/">主页</a></div>
-      <small>今日营业 · 预计 40 分钟送达</small>
-      <h1>山岚食集</h1>
-      <div>山野食材，认真做饭</div>
-    </header>
-    <main><div class="category-row" id="categories"></div><div class="goods" id="goods"></div></main>
-    <div class="cartbar"><div><small>购物车</small><div id="cartTotal">还没有选择菜品</div></div><button class="btn primary small" id="checkout">去结算</button></div>
-  </div>
-  <script src="/assets/user.js?v=20260622-4"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>snap-meal · 点餐</title>
+    <script type="module" crossorigin src="/assets/user-CpRr5Cyh.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/styles-q4FzwvNJ.js">
+    <link rel="modulepreload" crossorigin href="/assets/api-D3YJG3t1.js">
+    <link rel="stylesheet" crossorigin href="/assets/styles-vGVaKKaJ.css">
+    <link rel="stylesheet" crossorigin href="/assets/user-DtBPvBjV.css">
+  </head>
+  <body class="user-page">
+    <div id="root"></div>
+  </body>
 </html>

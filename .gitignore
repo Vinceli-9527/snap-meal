@@ -7,3 +7,6 @@
 *.log
 /output/
 /.claude/
+/frontend/node_modules/
+/frontend/dist/
+codex-prompts.txt

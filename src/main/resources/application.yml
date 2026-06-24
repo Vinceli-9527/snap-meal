@@ -21,14 +21,31 @@ spring:
   jackson:
     time-zone: Asia/Shanghai
     default-property-inclusion: non_null
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    timeout: 3000ms
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
 sky:
   security:
     token-secret: ${TOKEN_SECRET:snap-meal-course-secret-change-in-production}
   integrations:
     oss-mode: local
+    redis-mode: ${REDIS_MODE:memory}
     wechat-mode: mock
     payment-mode: mock
+    oss:
+      mode: ${OSS_MODE:local}
+      endpoint: ${OSS_ENDPOINT:}
+      access-key-id: ${OSS_ACCESS_KEY_ID:}
+      access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
+      bucket-name: ${OSS_BUCKET_NAME:}
   shop:
-    name: 山岚食集
+    name: snap-meal
     address: 上海市杨浦区大学路100号
     delivery-radius-km: 5

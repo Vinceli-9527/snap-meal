@@ -1,0 +1,14 @@
+{
+  "description": "Snap Meal user miniprogram",
+  "appid": "touristappid",
+  "projectname": "snap-meal-miniprogram",
+  "miniprogramRoot": "./",
+  "compileType": "miniprogram",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": false
+  }
+}

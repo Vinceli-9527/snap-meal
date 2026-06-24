@@ -1,0 +1,24 @@
+<view class="page checkout-page">
+  <view class="address card" bindtap="chooseAddress">
+    <view wx:if="{{address}}">
+      <view class="address-name">{{address.consignee}} {{address.phone}}</view>
+      <view class="address-detail">{{address.province_name || address.provinceName}}{{address.city_name || address.cityName}}{{address.district_name || address.districtName}}{{address.detail}}</view>
+    </view>
+    <view wx:else class="empty-address">请先添加收货地址</view>
+  </view>
+
+  <view class="card summary">
+    <view class="summary-title">订单商品</view>
+    <view wx:for="{{items}}" wx:key="id" class="summary-row">
+      <text>{{item.name}} x{{item.number}}</text>
+      <text>￥{{item.lineTotal}}</text>
+    </view>
+  </view>
+
+  <view class="total-box">
+    <text>合计</text>
+    <text class="price">￥{{total}}</text>
+  </view>
+
+  <button class="primary-btn submit" loading="{{submitting}}" bindtap="submitOrder">提交订单</button>
+</view>

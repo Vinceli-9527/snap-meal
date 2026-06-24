@@ -1,0 +1,35 @@
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+  font-size: 38rpx;
+  font-weight: 900;
+}
+
+.add {
+  width: 190rpx;
+  margin: 0;
+  font-size: 26rpx;
+}
+
+.addr-card {
+  padding: 28rpx;
+  margin-bottom: 18rpx;
+}
+
+.top {
+  display: flex;
+  gap: 24rpx;
+  font-size: 30rpx;
+}
+
+.name {
+  font-weight: 900;
+}
+
+.detail {
+  margin-top: 14rpx;
+  color: #68707a;
+  line-height: 1.5;
+}

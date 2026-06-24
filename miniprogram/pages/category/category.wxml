@@ -1,0 +1,15 @@
+<view class="page">
+  <view class="title">{{title}}</view>
+  <view wx:if="{{!dishes.length}}" class="empty">暂无数据</view>
+  <view wx:for="{{dishes}}" wx:key="id" class="row card">
+    <view class="thumb">🍽</view>
+    <view class="info">
+      <view class="name">{{item.name}}</view>
+      <view class="desc">{{item.description || '新鲜现做，准时送达'}}</view>
+      <view class="bottom">
+        <text class="price">￥{{item.price}}</text>
+        <button class="mini-add" data-id="{{item.id}}" bindtap="addCart">+</button>
+      </view>
+    </view>
+  </view>
+</view>

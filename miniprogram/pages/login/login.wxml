@@ -1,0 +1,9 @@
+<view class="login-page">
+  <view class="brand-card">
+    <view class="mark">SM</view>
+    <view class="brand">Snap Meal</view>
+    <view class="slogan">热餐鲜送，轻松点单</view>
+  </view>
+  <button class="primary-btn login-btn" loading="{{loading}}" bindtap="login">微信一键登录</button>
+  <view class="hint">实验环境使用模拟微信登录，无需真实授权。</view>
+</view>
