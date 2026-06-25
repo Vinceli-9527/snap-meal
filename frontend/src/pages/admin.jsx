@@ -179,7 +179,7 @@ function AdminView({ view, api }) {
     const loaders = {
       dashboard: () => api('/reports/overview'),
       dishes: () => api('/dishes'),
-      categories: () => api('/categories'),
+      categories: () => api('/categories?type=1'),
       orders: () => api('/orders')
     };
     loaders[view]()
@@ -230,27 +230,137 @@ function Metric({ label, value }) {
 }
 
 function Dishes({ rows, api, reload }) {
-  async function addDish() {
-    const categories = await api('/categories?type=1');
-    const name = prompt('菜品名称');
-    if (!name) return;
-    const price = prompt('价格', '28');
-    await api('/dishes', {
-      method: 'POST',
-      body: JSON.stringify({ name, price, categoryId: categories[0].id, status: 1, description: '' })
+  const [categories, setCategories] = useState([]);
+  const [editing, setEditing] = useState(null);
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    api('/categories?type=1')
+      .then((result) => alive && setCategories(Array.isArray(result) ? result : []))
+      .catch((error) => alive && !error.auth && setFormError(error.message));
+    return () => {
+      alive = false;
+    };
+  }, [api]);
+
+  function startAdd() {
+    setFormError('');
+    setEditing({
+      id: null,
+      name: '',
+      price: '',
+      categoryId: categories[0]?.id ? String(categories[0].id) : '',
+      status: 1,
+      image: '',
+      description: ''
     });
-    reload();
   }
+
+  function startEdit(row) {
+    setFormError('');
+    setEditing({
+      id: row.id,
+      name: row.name || '',
+      price: row.price ?? '',
+      categoryId: String(row.category_id || row.categoryId || ''),
+      status: Number(row.status) === 0 ? 0 : 1,
+      image: row.image || '',
+      description: row.description || ''
+    });
+  }
+
+  function updateDraft(field, value) {
+    setEditing((draft) => ({ ...draft, [field]: value }));
+  }
+
+  async function saveDish(event) {
+    event.preventDefault();
+    if (!editing) return;
+    const name = editing.name.trim();
+    const price = Number(editing.price);
+    const categoryId = Number(editing.categoryId);
+    if (!name) {
+      setFormError('请输入菜品名称');
+      return;
+    }
+    if (!categoryId) {
+      setFormError('请选择菜品分类');
+      return;
+    }
+    if (!Number.isFinite(price) || price < 0) {
+      setFormError('请输入正确的菜品价格');
+      return;
+    }
+    setSaving(true);
+    setFormError('');
+    try {
+      const payload = {
+        name,
+        price,
+        categoryId,
+        status: Number(editing.status),
+        image: editing.image || '',
+        description: editing.description || ''
+      };
+      await api(editing.id ? `/dishes/${editing.id}` : '/dishes', {
+        method: editing.id ? 'PUT' : 'POST',
+        body: JSON.stringify(payload)
+      });
+      setEditing(null);
+      reload();
+    } catch (error) {
+      if (!error.auth) setFormError(error.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function toggleDish(id, value) {
     await api(`/dishes/${id}/status?value=${value}`, { method: 'PATCH' });
     reload();
   }
+
   return (
     <div className="panel">
       <div className="panel-head">
         <h2>菜品目录</h2>
-        <button className="btn primary small" onClick={addDish}>新增菜品</button>
+        <button className="btn primary small" onClick={startAdd}>新增菜品</button>
       </div>
+      {editing ? (
+        <form className="dish-editor" onSubmit={saveDish}>
+          <div className="field">
+            <label>菜品名称</label>
+            <input value={editing.name} onChange={(event) => updateDraft('name', event.target.value)} required />
+          </div>
+          <div className="field">
+            <label>分类</label>
+            <select value={editing.categoryId} onChange={(event) => updateDraft('categoryId', event.target.value)} required>
+              <option value="" disabled>请选择分类</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label>价格</label>
+            <input type="number" min="0" step="0.01" value={editing.price} onChange={(event) => updateDraft('price', event.target.value)} required />
+          </div>
+          <div className="field">
+            <label>状态</label>
+            <select value={editing.status} onChange={(event) => updateDraft('status', event.target.value)}>
+              <option value="1">起售</option>
+              <option value="0">停售</option>
+            </select>
+          </div>
+          {formError ? <p className="form-error" role="alert">{formError}</p> : null}
+          <div className="form-actions">
+            <button className="btn primary small" disabled={saving || !categories.length}>{saving ? '保存中...' : '保存'}</button>
+            <button className="btn small" type="button" onClick={() => setEditing(null)} disabled={saving}>取消</button>
+          </div>
+        </form>
+      ) : formError ? <p className="form-error" role="alert">{formError}</p> : null}
       <table>
         <thead><tr><th>名称</th><th>分类</th><th>价格</th><th>状态</th><th>操作</th></tr></thead>
         <tbody>
@@ -260,9 +370,19 @@ function Dishes({ rows, api, reload }) {
               <td>{row.category_name}</td>
               <td>￥{row.price}</td>
               <td><span className={`status ${row.status ? '' : 'off'}`}>{row.status ? '起售' : '停售'}</span></td>
-              <td><button className="btn small" onClick={() => toggleDish(row.id, row.status ? 0 : 1)}>{row.status ? '停售' : '起售'}</button></td>
+              <td>
+                <div className="table-actions">
+                  <button className="btn small" onClick={() => startEdit(row)}>编辑</button>
+                  <button className="btn small" onClick={() => toggleDish(row.id, row.status ? 0 : 1)}>{row.status ? '停售' : '起售'}</button>
+                </div>
+              </td>
             </tr>
           ))}
+          {!rows.length ? (
+            <tr>
+              <td colSpan="5"><div className="empty compact">还没有菜品，先新增一个菜品。</div></td>
+            </tr>
+          ) : null}
         </tbody>
       </table>
     </div>
@@ -270,32 +390,101 @@ function Dishes({ rows, api, reload }) {
 }
 
 function Categories({ rows, api, reload }) {
-  async function addCategory() {
-    const name = prompt('分类名称');
-    if (!name) return;
-    await api('/categories', {
-      method: 'POST',
-      body: JSON.stringify({ name, type: 1, sort: 50, status: 1 })
+  const [editing, setEditing] = useState(null);
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  function startAdd() {
+    setFormError('');
+    setEditing({
+      id: null,
+      name: '',
+      status: 1
     });
-    reload();
   }
+
+  function startEdit(row) {
+    setFormError('');
+    setEditing({
+      id: row.id,
+      name: row.name || '',
+      status: Number(row.status) === 0 ? 0 : 1
+    });
+  }
+
+  function updateDraft(field, value) {
+    setEditing((draft) => ({ ...draft, [field]: value }));
+  }
+
+  async function saveCategory(event) {
+    event.preventDefault();
+    if (!editing) return;
+    const name = editing.name.trim();
+    if (!name) {
+      setFormError('请输入分类名称');
+      return;
+    }
+    setSaving(true);
+    setFormError('');
+    try {
+      const payload = {
+        name,
+        status: Number(editing.status)
+      };
+      await api(editing.id ? `/categories/${editing.id}` : '/categories', {
+        method: editing.id ? 'PUT' : 'POST',
+        body: JSON.stringify(payload)
+      });
+      setEditing(null);
+      reload();
+    } catch (error) {
+      if (!error.auth) setFormError(error.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="panel">
       <div className="panel-head">
         <h2>分类</h2>
-        <button className="btn primary small" onClick={addCategory}>新增分类</button>
+        <button className="btn primary small" onClick={startAdd}>新增分类</button>
       </div>
+      {editing ? (
+        <form className="management-editor category-editor" onSubmit={saveCategory}>
+          <div className="field">
+            <label>分类名称</label>
+            <input value={editing.name} onChange={(event) => updateDraft('name', event.target.value)} required />
+          </div>
+          <div className="field">
+            <label>状态</label>
+            <select value={editing.status} onChange={(event) => updateDraft('status', event.target.value)}>
+              <option value="1">启用</option>
+              <option value="0">禁用</option>
+            </select>
+          </div>
+          {formError ? <p className="form-error" role="alert">{formError}</p> : null}
+          <div className="form-actions">
+            <button className="btn primary small" disabled={saving}>{saving ? '保存中...' : '保存'}</button>
+            <button className="btn small" type="button" onClick={() => setEditing(null)} disabled={saving}>取消</button>
+          </div>
+        </form>
+      ) : formError ? <p className="form-error" role="alert">{formError}</p> : null}
       <table>
-        <thead><tr><th>名称</th><th>类型</th><th>排序</th><th>状态</th></tr></thead>
+        <thead><tr><th>名称</th><th>状态</th><th>操作</th></tr></thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.id}>
               <td>{row.name}</td>
-              <td>{row.type === 1 ? '菜品' : '套餐'}</td>
-              <td>{row.sort}</td>
               <td>{row.status ? '启用' : '禁用'}</td>
+              <td><button className="btn small" onClick={() => startEdit(row)}>编辑</button></td>
             </tr>
           ))}
+          {!rows.length ? (
+            <tr>
+              <td colSpan="3"><div className="empty compact">还没有分类，先新增一个分类。</div></td>
+            </tr>
+          ) : null}
         </tbody>
       </table>
     </div>

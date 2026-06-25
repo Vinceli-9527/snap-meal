@@ -1,13 +1,16 @@
 <view class="page">
   <view class="hero">
-    <view>
-      <view class="hello">今天想吃点什么？</view>
-      <view class="sub">Snap Meal 为你准备好了</view>
+    <view class="account-row">
+      <view>
+        <view class="account-name">微信体验用户</view>
+        <view class="account-method">微信登录</view>
+      </view>
+      <navigator class="home-link" url="/pages/order/order">订单</navigator>
     </view>
-    <view class="badge">营业中</view>
+    <view class="hero-meta">今日营业 · 预计 40 分钟送达</view>
+    <view class="brand">snap-meal</view>
+    <view class="tagline">山野食材，认真做饭</view>
   </view>
-
-  <view class="search">搜索菜品、套餐</view>
 
   <scroll-view class="tabs" scroll-x enhanced show-scrollbar="{{false}}">
     <view wx:for="{{categories}}" wx:key="id" class="tab {{activeCategoryId === item.id ? 'active' : ''}}" data-id="{{item.id}}" bindtap="selectCategory">
@@ -26,16 +29,55 @@
     <view wx:for="{{dishes}}" wx:key="id" class="dish-card card">
       <view class="dish-image">
         <image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFill" binderror="imageError" />
-        <text wx:else>🍽</text>
+        <text wx:else>🍱</text>
       </view>
       <view class="dish-info">
         <view class="dish-name">{{item.name}}</view>
-        <view class="sales">月销量 {{item.sales || item.monthSales || 0}}</view>
+        <view class="sales">{{item.description || '当日新鲜制作'}}</view>
         <view class="dish-bottom">
           <text class="price">￥{{item.price}}</text>
-          <button class="add-btn" data-id="{{item.id}}" bindtap="addCart">+</button>
+          <view class="add-btn {{addingId === item.id ? 'success' : ''}}" data-id="{{item.id}}" bindtap="addCart">
+            {{addingId === item.id ? '✓' : '+'}}
+          </view>
         </view>
       </view>
     </view>
+  </view>
+
+  <view wx:if="{{cartOpen}}" class="cart-mask" bindtap="closeCartPanel"></view>
+  <view wx:if="{{cartOpen}}" class="cart-panel" catchtap="noop">
+    <view class="cart-panel-head">
+      <view>
+        <view class="cart-panel-title">已选菜品</view>
+        <view class="cart-panel-sub">{{cartPanelSummary}}</view>
+      </view>
+      <view class="cart-panel-actions">
+        <view wx:if="{{cart.length}}" class="cart-clear" bindtap="clearCart">清空</view>
+        <view class="cart-close" bindtap="closeCartPanel">×</view>
+      </view>
+    </view>
+    <scroll-view wx:if="{{cart.length}}" class="cart-panel-list" scroll-y enhanced show-scrollbar="{{false}}">
+      <view wx:for="{{cart}}" wx:key="id" class="cart-panel-item">
+        <view class="cart-item-main">
+          <view class="cart-item-name">{{item.name}}</view>
+          <view class="cart-item-price">￥{{item.priceText}} × {{item.number}}</view>
+        </view>
+        <view class="cart-stepper">
+          <view class="cart-step {{updatingCartId === item.id ? 'disabled' : ''}}" data-id="{{item.id}}" bindtap="decrementCart">−</view>
+          <view class="cart-qty">{{item.number}}</view>
+          <view class="cart-step {{updatingCartId === item.id ? 'disabled' : ''}}" data-id="{{item.id}}" bindtap="incrementCart">+</view>
+        </view>
+        <view class="cart-line-total">￥{{item.lineTotal}}</view>
+      </view>
+    </scroll-view>
+    <view wx:else class="cart-panel-empty">还没有选择菜品，先从上面的菜单添加一份。</view>
+  </view>
+
+  <view class="cartbar">
+    <view class="cartbar-summary" bindtap="toggleCartPanel">
+      <view class="cartbar-label">购物车</view>
+      <view class="cartbar-main">{{cartSummary}}</view>
+    </view>
+    <view class="checkout-link" bindtap="checkout">去结算</view>
   </view>
 </view>

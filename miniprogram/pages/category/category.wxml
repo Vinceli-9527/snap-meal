@@ -1,14 +1,22 @@
 <view class="page">
-  <view class="title">{{title}}</view>
+  <view class="category-hero">
+    <navigator class="back-link" open-type="navigateBack">返回</navigator>
+    <view class="hero-meta">分类详情</view>
+    <view class="title">{{title}}</view>
+    <view class="tagline">山野食材，认真做饭</view>
+  </view>
   <view wx:if="{{!dishes.length}}" class="empty">暂无数据</view>
   <view wx:for="{{dishes}}" wx:key="id" class="row card">
-    <view class="thumb">🍽</view>
+    <view class="thumb">
+      <image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFill" />
+      <text wx:else>🍱</text>
+    </view>
     <view class="info">
       <view class="name">{{item.name}}</view>
       <view class="desc">{{item.description || '新鲜现做，准时送达'}}</view>
       <view class="bottom">
         <text class="price">￥{{item.price}}</text>
-        <button class="mini-add" data-id="{{item.id}}" bindtap="addCart">+</button>
+        <view class="mini-add" data-id="{{item.id}}" bindtap="addCart">+</view>
       </view>
     </view>
   </view>

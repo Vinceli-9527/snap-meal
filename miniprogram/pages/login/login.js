@@ -9,7 +9,7 @@ Page({
     api.post('/api/user/auth/login', { loginMethod: 'WECHAT' })
       .then((data) => {
         auth.setSession(data);
-        wx.switchTab({ url: '/pages/index/index' });
+        wx.reLaunch({ url: '/pages/index/index' });
       })
       .catch(() => {})
       .finally(() => this.setData({ loading: false }));

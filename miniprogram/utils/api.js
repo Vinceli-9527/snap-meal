@@ -44,5 +44,6 @@ module.exports = {
   request,
   get(path, data) { return request('GET', path, data); },
   post(path, data) { return request('POST', path, data); },
+  patch(path, data) { return request('PATCH', path, data); },
   delete(path, data) { return request('DELETE', path, data); }
 };

@@ -43,7 +43,7 @@ Page({
     }).then((order) => api.post('/api/user/orders/' + order.id + '/pay'))
       .then(() => {
         wx.showToast({ title: '支付成功', icon: 'success' });
-        wx.switchTab({ url: '/pages/order/order' });
+        wx.redirectTo({ url: '/pages/order/order' });
       })
       .catch(() => {})
       .finally(() => this.setData({ submitting: false }));

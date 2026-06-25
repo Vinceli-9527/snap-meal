@@ -2,15 +2,14 @@
   min-height: 100vh;
   box-sizing: border-box;
   padding: 120rpx 48rpx 48rpx;
-  background: linear-gradient(180deg, #fff4ee 0%, #f7f7f7 48%);
+  background: #0f1d16;
 }
 
 .brand-card {
   padding: 72rpx 40rpx;
   text-align: center;
-  background: #fff;
-  border-radius: 28rpx;
-  box-shadow: 0 20rpx 50rpx rgba(255, 107, 53, 0.14);
+  background: #f3f0e8;
+  border: 1rpx solid #deddd4;
 }
 
 .mark {
@@ -18,9 +17,8 @@
   height: 112rpx;
   line-height: 112rpx;
   margin: 0 auto 28rpx;
-  border-radius: 32rpx;
-  background: #ff6b35;
-  color: #fff;
+  background: #315943;
+  color: #ffffff;
   font-weight: 900;
   font-size: 36rpx;
 }
@@ -32,7 +30,7 @@
 
 .slogan {
   margin-top: 16rpx;
-  color: #7b8088;
+  color: #59635c;
   font-size: 28rpx;
 }
 
@@ -43,6 +41,6 @@
 .hint {
   margin-top: 28rpx;
   text-align: center;
-  color: #9aa0a6;
+  color: #c6d4c9;
   font-size: 24rpx;
 }

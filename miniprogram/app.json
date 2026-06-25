@@ -1,7 +1,6 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/cart/cart",
     "pages/order/order",
     "pages/checkout/checkout",
     "pages/address/address",
@@ -11,20 +10,9 @@
   ],
   "window": {
     "navigationBarTitleText": "Snap Meal",
-    "navigationBarBackgroundColor": "#ff6b35",
+    "navigationBarBackgroundColor": "#315943",
     "navigationBarTextStyle": "white",
-    "backgroundColor": "#f7f7f7"
-  },
-  "tabBar": {
-    "color": "#8a8f98",
-    "selectedColor": "#ff6b35",
-    "backgroundColor": "#ffffff",
-    "borderStyle": "black",
-    "list": [
-      { "pagePath": "pages/index/index", "text": "首页" },
-      { "pagePath": "pages/cart/cart", "text": "购物车" },
-      { "pagePath": "pages/order/order", "text": "订单" }
-    ]
+    "backgroundColor": "#fbfaf5"
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json"

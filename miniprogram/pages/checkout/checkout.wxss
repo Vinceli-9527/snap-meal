@@ -14,12 +14,12 @@
 
 .address-detail {
   margin-top: 14rpx;
-  color: #6f7680;
+  color: #687168;
   line-height: 1.5;
 }
 
 .empty-address {
-  color: #ff6b35;
+  color: #315943;
   font-weight: 800;
 }
 
@@ -37,7 +37,7 @@
   display: flex;
   justify-content: space-between;
   padding: 14rpx 0;
-  color: #555;
+  color: #687168;
 }
 
 .total-box {
