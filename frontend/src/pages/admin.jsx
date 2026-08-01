@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { jsonOptions, readJson, requestJson } from '../api.js';
 import '../styles.css';
@@ -191,12 +191,12 @@ function AdminView({ view, api }) {
   }, [api, reloadKey, view]);
 
   if (error) return <div className="panel">{error}</div>;
+  if (view === 'orders') return <Orders api={api} />;
   const data = state.view === view ? state.data : null;
   if (!data) return <div className="panel">正在加载...</div>;
   if (view === 'dashboard') return <Dashboard data={data} />;
   if (view === 'dishes') return <Dishes rows={Array.isArray(data) ? data : []} api={api} reload={reload} />;
-  if (view === 'categories') return <Categories rows={Array.isArray(data) ? data : []} api={api} reload={reload} />;
-  return <Orders rows={Array.isArray(data) ? data : []} api={api} reload={reload} />;
+  return <Categories rows={Array.isArray(data) ? data : []} api={api} reload={reload} />;
 }
 
 function Dashboard({ data }) {
@@ -491,35 +491,177 @@ function Categories({ rows, api, reload }) {
   );
 }
 
-function Orders({ rows, api, reload }) {
-  const status = useMemo(() => ['', '待付款', '待接单', '已接单', '派送中', '已完成', '已取消'], []);
+const ORDER_STATUS_TEXT = ['', '待付款', '待接单', '已接单', '派送中', '已完成', '已取消'];
+const ORDER_FILTERS = [
+  ['', '全部'],
+  ['1', '待付款'],
+  ['2', '待接单'],
+  ['3', '已接单'],
+  ['4', '派送中'],
+  ['5', '已完成'],
+  ['6', '已取消']
+];
+
+function Orders({ api }) {
+  const [filter, setFilter] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [appliedNumber, setAppliedNumber] = useState('');
+  const [rows, setRows] = useState(null);
+  const [statistics, setStatistics] = useState({});
+  const [expandedId, setExpandedId] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [error, setError] = useState('');
+
+  const load = useCallback(() => {
+    const params = new URLSearchParams();
+    if (filter) params.set('status', filter);
+    if (appliedNumber) params.set('number', appliedNumber);
+    const query = params.toString();
+    Promise.all([api(`/orders${query ? `?${query}` : ''}`), api('/orders/statistics')])
+      .then(([list, stats]) => {
+        setRows(list);
+        setStatistics(Object.fromEntries(stats.map((row) => [String(row.status), row.count])));
+        setError('');
+      })
+      .catch((err) => {
+        if (!err.auth) setError(err.message);
+      });
+  }, [api, filter, appliedNumber]);
+
+  useEffect(load, [load]);
+
   async function orderAction(id, action) {
-    await api(`/orders/${id}/${action}`, { method: 'POST' });
-    reload();
+    try {
+      await api(`/orders/${id}/${action}`, { method: 'POST' });
+      setExpandedId(null);
+      load();
+    } catch (err) {
+      if (!err.auth) alert(err.message);
+    }
   }
+
+  async function orderActionWithReason(id, action, label) {
+    const reason = window.prompt(`${label}原因`);
+    if (reason === null) return;
+    if (!reason.trim()) {
+      alert(`请填写${label}原因`);
+      return;
+    }
+    try {
+      await api(`/orders/${id}/${action}`, { method: 'POST', body: JSON.stringify({ reason: reason.trim() }) });
+      setExpandedId(null);
+      load();
+    } catch (err) {
+      if (!err.auth) alert(err.message);
+    }
+  }
+
+  async function toggleDetail(id) {
+    if (expandedId === id) {
+      setExpandedId(null);
+      setDetail(null);
+      return;
+    }
+    try {
+      const data = await api(`/orders/${id}`);
+      setDetail(data);
+      setExpandedId(id);
+    } catch (err) {
+      if (!err.auth) alert(err.message);
+    }
+  }
+
   return (
     <div className="panel">
-      <div className="panel-head"><h2>最近订单</h2></div>
-      {rows.length ? (
+      <div className="panel-head"><h2>订单管理</h2></div>
+      <div className="order-toolbar">
+        <div className="order-filters">
+          {ORDER_FILTERS.map(([value, label]) => (
+            <button
+              key={value || 'all'}
+              className={`btn small${filter === value ? ' primary' : ''}`}
+              onClick={() => setFilter(value)}
+            >
+              {label}{value && statistics[value] ? ` (${statistics[value]})` : ''}
+            </button>
+          ))}
+        </div>
+        <form
+          className="order-search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setAppliedNumber(searchInput.trim());
+          }}
+        >
+          <input
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="按订单号搜索"
+          />
+          <button className="btn small" type="submit">搜索</button>
+        </form>
+      </div>
+      {error ? <div className="empty">{error}</div> : null}
+      {!error && rows === null ? <div className="empty">正在加载...</div> : null}
+      {!error && rows && rows.length ? (
         <table>
           <thead><tr><th>订单号</th><th>收货人</th><th>金额</th><th>状态</th><th>操作</th></tr></thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.id}>
-                <td>{row.number}</td>
-                <td>{row.consignee}</td>
-                <td>￥{row.amount}</td>
-                <td>{status[row.status]}</td>
-                <td>
-                  {row.status === 2 ? <button className="btn small" onClick={() => orderAction(row.id, 'confirm')}>接单</button> : null}
-                  {row.status === 3 ? <button className="btn small" onClick={() => orderAction(row.id, 'deliver')}>派送</button> : null}
-                  {row.status === 4 ? <button className="btn small" onClick={() => orderAction(row.id, 'complete')}>完成</button> : null}
-                </td>
-              </tr>
+              <React.Fragment key={row.id}>
+                <tr>
+                  <td>{row.number}</td>
+                  <td>{row.consignee}</td>
+                  <td>￥{row.amount}</td>
+                  <td>{ORDER_STATUS_TEXT[row.status]}</td>
+                  <td className="order-actions">
+                    {row.status === 2 ? <button className="btn small" onClick={() => orderAction(row.id, 'confirm')}>接单</button> : null}
+                    {row.status === 2 ? <button className="btn small" onClick={() => orderActionWithReason(row.id, 'reject', '拒单')}>拒单</button> : null}
+                    {row.status === 3 ? <button className="btn small" onClick={() => orderAction(row.id, 'deliver')}>派送</button> : null}
+                    {row.status === 4 ? <button className="btn small" onClick={() => orderAction(row.id, 'complete')}>完成</button> : null}
+                    {row.status === 2 || row.status === 3 ? <button className="btn small" onClick={() => orderActionWithReason(row.id, 'cancel', '取消')}>取消</button> : null}
+                    <button className="btn small" onClick={() => toggleDetail(row.id)}>{expandedId === row.id ? '收起' : '详情'}</button>
+                  </td>
+                </tr>
+                {expandedId === row.id ? (
+                  <tr className="order-detail-row">
+                    <td colSpan="5"><OrderDetail detail={detail} /></td>
+                  </tr>
+                ) : null}
+              </React.Fragment>
             ))}
           </tbody>
         </table>
-      ) : <div className="empty">还没有订单</div>}
+      ) : null}
+      {!error && rows && !rows.length ? <div className="empty">没有符合条件的订单</div> : null}
+    </div>
+  );
+}
+
+function OrderDetail({ detail }) {
+  if (!detail) return <div className="empty compact">正在加载...</div>;
+  const items = Array.isArray(detail.details) ? detail.details : [];
+  return (
+    <div className="order-detail">
+      <div><strong>收货信息</strong>：{detail.consignee} {detail.phone} {detail.address}</div>
+      {detail.remark ? <div><strong>备注</strong>：{detail.remark}</div> : null}
+      <div><strong>下单时间</strong>：{detail.order_time}</div>
+      {detail.estimated_delivery_time ? <div><strong>预计送达</strong>：{detail.estimated_delivery_time}</div> : null}
+      {detail.delivery_time ? <div><strong>送达时间</strong>：{detail.delivery_time}</div> : null}
+      {detail.rejection_reason ? <div><strong>拒单原因</strong>：{detail.rejection_reason}</div> : null}
+      {detail.cancel_reason ? <div><strong>取消原因</strong>：{detail.cancel_reason}</div> : null}
+      <table>
+        <thead><tr><th>菜品</th><th>数量</th><th>单价</th></tr></thead>
+        <tbody>
+          {items.map((item, index) => (
+            <tr key={index}>
+              <td>{item.name}</td>
+              <td>×{item.number}</td>
+              <td>￥{item.amount}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

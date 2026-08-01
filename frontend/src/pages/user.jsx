@@ -7,6 +7,7 @@ import '../styles.css';
 
 const getLoginMethod = (profile) => profile.loginMethod || profile.loginmethod;
 const methodName = (method) => (method === 'PHONE' ? '手机号码登录' : '微信登录');
+const ORDER_STATUS_TEXT = ['', '待付款', '待接单', '已接单', '派送中', '已完成', '已取消'];
 
 function UserApp() {
   const [token, setToken] = useState(() => localStorage.userToken || '');
@@ -210,6 +211,7 @@ function MealBrowser({ profile, api, cart, refreshCart }) {
   const [addFeedback, setAddFeedback] = useState({});
   const [flyEffect, setFlyEffect] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [tab, setTab] = useState('browse');
   const cartbarRef = useRef(null);
 
   useEffect(() => {
@@ -321,6 +323,7 @@ function MealBrowser({ profile, api, cart, refreshCart }) {
       await api(`/orders/${order.id}/pay`, { method: 'POST' });
       alert(`支付成功\n订单号：${order.number}`);
       refreshCart();
+      setTab('orders');
     } catch (error) {
       if (!error.auth) alert(error.message);
     }
@@ -348,12 +351,29 @@ function MealBrowser({ profile, api, cart, refreshCart }) {
             <span>{profile.nickname}</span>
             <small>{methodName(getLoginMethod(profile))}</small>
           </div>
-          <a href="/">主页</a>
+          <div className="user-account-links">
+            <a
+              href="#orders"
+              onClick={(event) => {
+                event.preventDefault();
+                setTab((current) => (current === 'orders' ? 'browse' : 'orders'));
+              }}
+            >
+              {tab === 'orders' ? '返回点餐' : '我的订单'}
+            </a>
+            <a href="/">主页</a>
+          </div>
         </div>
         <small>今日营业 · 预计 40 分钟送达</small>
         <h1>snap-meal</h1>
         <div>山野食材，认真做饭</div>
       </header>
+      {tab === 'orders' ? (
+        <main>
+          <OrdersView api={api} />
+        </main>
+      ) : (
+        <>
       <main>
         <Dock items={categoryItems} className="category-dock" />
         <div className="goods">
@@ -405,6 +425,67 @@ function MealBrowser({ profile, api, cart, refreshCart }) {
         </div>
         <button className="btn primary small" onClick={checkout}>去结算</button>
       </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function OrdersView({ api }) {
+  const [orders, setOrders] = useState(null);
+  const [error, setError] = useState('');
+
+  const load = useCallback(() => {
+    api('/orders')
+      .then((rows) => {
+        setOrders(rows);
+        setError('');
+      })
+      .catch((err) => {
+        if (!err.auth) setError(err.message);
+      });
+  }, [api]);
+
+  useEffect(load, [load]);
+
+  async function cancelOrder(id) {
+    if (!window.confirm('确定取消这笔订单吗？')) return;
+    try {
+      await api(`/orders/${id}/cancel`, { method: 'POST' });
+      load();
+    } catch (err) {
+      if (!err.auth) alert(err.message);
+    }
+  }
+
+  if (error) return <div className="empty">{error}</div>;
+  if (orders === null) return <div className="empty">正在加载...</div>;
+  if (!orders.length) return <div className="empty">还没有订单，去挑几道菜吧</div>;
+
+  return (
+    <div className="order-list">
+      {orders.map((order) => (
+        <article className="order-card" key={order.id}>
+          <div className="order-card-head">
+            <strong>{ORDER_STATUS_TEXT[order.status] || '未知状态'}</strong>
+            <small>{order.order_time}</small>
+          </div>
+          <div className="order-card-body">
+            <span>订单号 {order.number}</span>
+            {order.estimated_delivery_time && order.status >= 2 && order.status <= 4 ? (
+              <span>预计送达 {order.estimated_delivery_time}</span>
+            ) : null}
+            {order.rejection_reason ? <span>拒单原因:{order.rejection_reason}</span> : null}
+            {order.cancel_reason ? <span>取消原因:{order.cancel_reason}</span> : null}
+          </div>
+          <div className="order-card-foot">
+            <strong>￥{order.amount}</strong>
+            {order.status === 1 || order.status === 2 ? (
+              <button className="btn small" onClick={() => cancelOrder(order.id)}>取消订单</button>
+            ) : null}
+          </div>
+        </article>
+      ))}
     </div>
   );
 }
