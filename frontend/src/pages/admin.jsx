@@ -1,13 +1,33 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { jsonOptions, readJson, requestJson } from '../api.js';
 import '../styles.css';
+
+marked.setOptions({ gfm: true, breaks: true });
+
+// 经营问答的回答按 Markdown 渲染（表格/加粗/列表等）。
+// 大模型输出属不可信输入：marked 转 HTML 后必须过 DOMPurify 消毒，
+// 并禁掉对纯文本回答无意义的激活/嵌入标签与行内样式。
+function MarkdownText({ text }) {
+  const html = useMemo(
+    () =>
+      DOMPurify.sanitize(marked.parse(text || ''), {
+        FORBID_TAGS: ['img', 'iframe', 'object', 'embed', 'form', 'input', 'button', 'textarea', 'select', 'video', 'audio', 'svg', 'math'],
+        FORBID_ATTR: ['style']
+      }),
+    [text]
+  );
+  return <div className="qa-text qa-md" dangerouslySetInnerHTML={{ __html: html }} />;
+}
 
 const views = [
   ['dashboard', '经营概览'],
   ['dishes', '菜品管理'],
   ['categories', '分类管理'],
-  ['orders', '订单管理']
+  ['orders', '订单管理'],
+  ['agent', '经营问答']
 ];
 
 function AdminApp() {
@@ -180,7 +200,8 @@ function AdminView({ view, api }) {
       dashboard: () => api('/reports/overview'),
       dishes: () => api('/dishes'),
       categories: () => api('/categories?type=1'),
-      orders: () => api('/orders')
+      orders: () => api('/orders'),
+      agent: () => Promise.resolve(null)
     };
     loaders[view]()
       .then((result) => alive && setState({ view, data: result }))
@@ -192,6 +213,7 @@ function AdminView({ view, api }) {
 
   if (error) return <div className="panel">{error}</div>;
   if (view === 'orders') return <Orders api={api} />;
+  if (view === 'agent') return <AgentQA api={api} />;
   const data = state.view === view ? state.data : null;
   if (!data) return <div className="panel">正在加载...</div>;
   if (view === 'dashboard') return <Dashboard data={data} />;
@@ -662,6 +684,253 @@ function OrderDetail({ detail }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function AgentQA({ api }) {
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState(null);
+  const [error, setError] = useState('');
+  const [keyDraft, setKeyDraft] = useState('');
+  const [showKey, setShowKey] = useState(false);
+  const [keyOpen, setKeyOpen] = useState(false);
+  const [keyMsg, setKeyMsg] = useState(null);
+  const [testing, setTesting] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    api('/agent/status')
+      .then((data) => {
+        if (!alive) return;
+        setStatus(data);
+        if (!data.configured) setKeyOpen(true);
+      })
+      .catch((err) => alive && !err.auth && setError(err.message));
+    return () => {
+      alive = false;
+    };
+  }, [api]);
+
+  async function refreshStatus() {
+    try {
+      setStatus(await api('/agent/status'));
+    } catch (err) {
+      if (!err.auth) setError(err.message);
+    }
+  }
+
+  async function saveKey() {
+    const apiKey = keyDraft.trim();
+    if (!apiKey || saving) return;
+    setSaving(true);
+    setKeyMsg(null);
+    try {
+      await api('/agent/key', { method: 'POST', body: JSON.stringify({ apiKey }) });
+      setKeyMsg({ ok: true, text: `已保存并即时生效，无需重启服务` });
+      setKeyDraft('');
+      setShowKey(false);
+      await refreshStatus();
+    } catch (err) {
+      if (!err.auth) setKeyMsg({ ok: false, text: err.message });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function testKey() {
+    const apiKey = keyDraft.trim();
+    if (!apiKey || testing) return;
+    setTesting(true);
+    setKeyMsg(null);
+    try {
+      const data = await api('/agent/key/test', { method: 'POST', body: JSON.stringify({ apiKey }) });
+      setKeyMsg({ ok: data.ok, text: data.message });
+    } catch (err) {
+      if (!err.auth) setKeyMsg({ ok: false, text: err.message });
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  async function changeModel(event) {
+    const model = event.target.value;
+    if (!model || !status || model === status.model) return;
+    setSaving(true);
+    setKeyMsg(null);
+    try {
+      await api('/agent/model', { method: 'POST', body: JSON.stringify({ model }) });
+      setKeyMsg({ ok: true, text: `已切换模型：${model}，即时生效无需重启` });
+      await refreshStatus();
+    } catch (err) {
+      if (!err.auth) setKeyMsg({ ok: false, text: err.message });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function ask(event) {
+    event.preventDefault();
+    const question = input.trim();
+    if (!question || busy) return;
+    setInput('');
+    setError('');
+    setMessages((list) => [...list, { role: 'user', content: question }]);
+    setBusy(true);
+    try {
+      const data = await api('/agent/chat', {
+        method: 'POST',
+        body: JSON.stringify({ question })
+      });
+      setMessages((list) => [...list, { role: 'assistant', data }]);
+    } catch (err) {
+      if (!err.auth) setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function clearChat() {
+    setMessages([]);
+    setError('');
+  }
+
+  return (
+    <div className="panel qa-panel">
+      <div className="panel-head">
+        <h2>经营问答</h2>
+        <div className="qa-actions">
+          <span className="pill">
+            {status ? (status.configured ? `● ${status.model}` : '● 未配置 API Key') : '● 检测中...'}
+          </span>
+          <button className="btn small" onClick={clearChat}>清空对话</button>
+        </div>
+      </div>
+      <div className="qa-keycard">
+        <button type="button" className="qa-keycard-head" onClick={() => setKeyOpen((v) => !v)}>
+          <span>Agent 设置</span>
+          <span className="qa-keycard-meta">
+            {status ? (status.configured ? `已配置 ${status.masked}` : '未配置') : '检测中'}
+          </span>
+          <span className="qa-keycard-caret">{keyOpen ? '收起' : '展开'}</span>
+        </button>
+        {keyOpen ? (
+          <div className="qa-keycard-body">
+            <div className="qa-keycard-row">
+              <label className="qa-keycard-label">模型</label>
+              <select value={status?.model || ''} onChange={changeModel} disabled={saving || testing}>
+                {(status?.models || []).map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div className="qa-keycard-row">
+              <input
+                type={showKey ? 'text' : 'password'}
+                value={keyDraft}
+                onChange={(event) => setKeyDraft(event.target.value)}
+                placeholder="sk- 开头，粘贴 DeepSeek API Key"
+                disabled={testing || saving}
+              />
+              <button type="button" className="btn small" onClick={() => setShowKey((v) => !v)} disabled={testing || saving}>
+                {showKey ? '隐藏' : '显示'}
+              </button>
+              <button type="button" className="btn small" onClick={testKey} disabled={testing || saving || !keyDraft.trim()}>
+                {testing ? '测试中…' : '测试连接'}
+              </button>
+              <button type="button" className="btn small primary" onClick={saveKey} disabled={saving || testing || !keyDraft.trim()}>
+                {saving ? '保存中…' : '保存'}
+              </button>
+            </div>
+            {status ? (
+              <div className="qa-keycard-info">
+                当前 Key：{status.masked || '未配置'}　保存位置：{status.keyfile}
+              </div>
+            ) : null}
+            {keyMsg ? (
+              <p className={`qa-keymsg ${keyMsg.ok ? 'ok' : 'fail'}`}>{keyMsg.text}</p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+      {status && !status.configured ? (
+        <p className="form-error">
+          尚未配置 DeepSeek API Key，请展开上方「Agent 设置」卡片粘贴真实 Key 并保存。
+        </p>
+      ) : null}
+      {error ? <p className="form-error">{error}</p> : null}
+      <div className="qa-history">
+        {messages.length === 0 && !busy ? (
+          <div className="empty compact">
+            用自然语言提问，例如「最近7天营收多少？」「哪个菜卖得最好？」「有多少待接单订单？」
+          </div>
+        ) : null}
+        {messages.map((item, index) => (
+          <div key={index} className={`qa-message ${item.role === 'user' ? 'qa-user' : 'qa-assistant'}`}>
+            {item.role === 'user' ? (
+              <div className="qa-question">{item.content}</div>
+            ) : (
+              <div className="qa-answer">
+                {item.data && item.data.error ? (
+                  <p className="qa-error">{item.data.error}</p>
+                ) : (
+                  <>
+                    <MarkdownText text={item.data?.answer} />
+                    {item.data?.sql ? (
+                      <div className="qa-sql">
+                        <div className="qa-sql-label">
+                          执行 SQL{item.data.attempts > 1 ? `（纠错 ${item.data.attempts} 次后成功）` : ''}
+                        </div>
+                        <pre>{item.data.sql}</pre>
+                      </div>
+                    ) : null}
+                    {Array.isArray(item.data?.rows) && item.data.rows.length ? (
+                      <div className="qa-result">
+                        <table>
+                          <thead>
+                            <tr>
+                              {(item.data.columns || []).map((col, j) => <th key={j}>{col}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {item.data.rows.map((row, j) => (
+                              <tr key={j}>
+                                {row.map((cell, k) => (
+                                  <td key={k}>{cell == null ? '' : String(cell)}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {item.data.truncated ? (
+                          <p className="qa-note">结果较多，仅显示前 {item.data.rows.length} 行</p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+        {busy ? (
+          <div className="qa-message qa-assistant"><div className="qa-text">正在查询分析…</div></div>
+        ) : null}
+      </div>
+      <form className="qa-input" onSubmit={ask}>
+        <input
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          placeholder="输入经营问题，回车发送"
+          disabled={busy}
+        />
+        <button className="btn primary" type="submit" disabled={busy || !input.trim()}>
+          {busy ? '分析中…' : '发送'}
+        </button>
+      </form>
     </div>
   );
 }

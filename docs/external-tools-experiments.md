@@ -42,8 +42,8 @@ mvn -s maven-settings.xml spring-boot:run
 4. 新建 SQL 查询窗口，执行数据库创建语句：
 
 ```sql
-CREATE DATABASE sky_take_out CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE sky_take_out;
+CREATE DATABASE snap_meal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE snap_meal;
 ```
 
 5. 打开项目中的建表脚本：
@@ -68,7 +68,7 @@ order_detail
 auth_session
 ```
 
-7. 在 Workbench 左侧 `Schemas` 面板刷新 `sky_take_out`，展开 `Tables` 节点。
+7. 在 Workbench 左侧 `Schemas` 面板刷新 `snap_meal`，展开 `Tables` 节点。
 8. 截图左侧 Schema 面板，确保能看到上述 11 张表。
 
 注意：项目当前 `schema.sql` 还包含 `dish_flavor` 和 `shop_state` 等辅助表。如果直接导入完整脚本，Workbench 中可能显示超过 11 张表；报告中按实验要求重点说明指定的 11 张业务表即可。
@@ -76,7 +76,7 @@ auth_session
 ### 报告截图
 
 - 截图 1：Workbench 连接本地 MySQL 成功。
-- 截图 2：`sky_take_out` 数据库下显示 11 张表。
+- 截图 2：`snap_meal` 数据库下显示 11 张表。
 - 截图 3：任选一张表展示字段结构，例如 `orders` 或 `dish`。
 
 ### 常见问题和解决方法
@@ -398,7 +398,7 @@ https://xxxx.cpolar.io
 
 ### 实验 7 简述
 
-本实验使用 MySQL Workbench 完成数据库建表。首先启动本地 MySQL 服务并连接到本地实例，然后创建 `sky_take_out` 数据库，字符集设置为 `utf8mb4`。随后根据项目 `src/main/resources/schema.sql` 中的建表语句创建员工、用户、分类、菜品、购物车、订单、订单明细、认证会话等业务表。建表完成后在 Workbench 的 Schema 面板中刷新数据库并查看表结构，验证数据库表创建成功。
+本实验使用 MySQL Workbench 完成数据库建表。首先启动本地 MySQL 服务并连接到本地实例，然后创建 `snap_meal` 数据库，字符集设置为 `utf8mb4`。随后根据项目 `src/main/resources/schema.sql` 中的建表语句创建员工、用户、分类、菜品、购物车、订单、订单明细、认证会话等业务表。建表完成后在 Workbench 的 Schema 面板中刷新数据库并查看表结构，验证数据库表创建成功。
 
 ### 实验 8 简述
 

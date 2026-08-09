@@ -6,11 +6,43 @@ Snap Meal 是一个用于 Java 软件开发实战课程的外卖业务示例项�
 
 ## 功能概览
 
-- 管理端：管理员登录、分类管理、菜品管理、订单管理、经营概览、ECharts 图表仪表盘、Excel 报表导出。
+- 管理端：管理员登录、分类管理、菜品管理、订单管理、经营概览、ECharts 图表仪表盘、Excel 报表导出、经营问答（Text2SQL Agent）。
 - Web 用户端：模拟手机号登录、模拟微信登录、分类浏览、菜品列表、购物车明细、数量调整、地址管理、下单和模拟支付。
 - 微信小程序用户端：登录、分类菜品浏览、首页购物车弹层、购物车数量调整、地址管理、结算、模拟支付、订单列表。
 - 后端能力：统一 REST API、token 鉴权、H2/MySQL 数据库、购物车数量调整、阿里云 OSS 可选上传、Redis 可选 token 存储、Swagger/OpenAPI 文档。
 - 实验材料：版本归档、实验报告、外部工具使用文档、Postman Collection 模板。
+
+## v0.1.7 更新重点
+
+v0.1.7 修复了 DeepSeek function-calling 协议 bug，并把模型改为可运行时选择：
+
+- **修复 tool_calls 协议 bug**：此前对话偶发报错 `400 Bad Request: Messages with role 'tool' must be a response to a preceding message with 'tool_calls'`。原因是多轮自纠错时只回传了 tool 结果，缺少前导的 `assistant(tool_calls)` 消息。现已按 OpenAI 兼容协议补全消息顺序（assistant(tool_calls) → tool），并在 V4 思考模式下把 `reasoning_content` 原样带回，避免再次 400。
+- **默认模型切换为 `deepseek-v4-flash`**：官方已停用 `deepseek-chat`（2026-07-24 下线），现默认使用 `deepseek-v4-flash`，可用 `deepseek-v4-pro`。
+- **新增可选模型功能**：「经营问答」面板顶部改为「Agent 设置」卡片，内置模型下拉框，支持在 `deepseek-v4-flash` / `deepseek-v4-pro` 间切换，保存后写入 `.env`（`DEEPSEEK_MODEL=`）并即时生效、重启仍保留。
+- 新增 2 个鉴权接口：`GET /api/admin/agent/model`（当前模型 + 可选列表）、`POST /api/admin/agent/model`（切换模型，非法值返回 400）。
+- **回答按 Markdown 渲染**：经营问答的回答不再以纯文本展示，而是用 `marked` 渲染成真正排版（表格、加粗、列表、标题等），并过 `DOMPurify` 消毒（禁用 `img`/`iframe`/`form` 等标签与行内样式），大模型输出不会被注入脚本。
+- 新增 12 个测试：AgentModelStore 运行时模型存储单测（5）、自纠错循环协议断言（assistant 消息须排在 tool 消息之前 / reasoning_content 保留，2）、模型接口离线测试（5），测试总数从 45 增加到 57。
+
+## v0.1.6 更新重点
+
+v0.1.6 让「经营问答」配置 API Key 不再依赖命令行/环境变量，直接在管理端页面完成：
+
+- 「经营问答」面板新增 **API Key 设置**卡片：粘贴 DeepSeek API Key → 保存即写入项目根目录 `.env` 并**即时生效，无需重启**；支持「测试连接」按钮实时校验 Key 是否有效（区分认证失败/余额不足/限流/网络问题）。
+- 未配置 Key 时卡片自动展开并给出明确提示；配置后显示脱敏后的 Key（`sk-****后四位`）、模型名与保存位置。
+- 新增 3 个鉴权接口：`GET /api/admin/agent/key`、`POST /api/admin/agent/key`、`POST /api/admin/agent/key/test`（均需登录）。
+- `.env` 已加入 `.gitignore`，Key 不会进入版本库。
+- 新增 20 个测试：KeyStore 持久化/脱敏单测（7）、DeepSeekClient 错误映射单测（8，Mockito 脚本化）、Key 接口离线测试（5），测试总数从 25 增加到 45。
+
+## v0.1.5 更新重点
+
+v0.1.5 为管理端新增「经营问答」能力：一个 Text2SQL Agent，把自然语言经营问题转成只读 SQL 查询并给出中文经营解释，运营者无需掌握 SQL 即可洞察订单数据。
+
+- 管理端新增「经营问答」面板：输入「最近7天营收多少？」这类问题，Agent 自动生成 SQL、只读执行、展示结果表，并给出中文经营解读。
+- 多轮 function-calling 自纠错循环：SQL 校验或执行失败时，错误会回传给大模型自动修正重试（最多 3 次），成功后才返回最终答案。
+- 只读 SQL 安全层：仅允许单条 SELECT，拒绝多语句拼接、注释绕过、DDL/DML 关键字与危险函数；查询在只读连接上执行，带 10 秒超时与 200 行结果上限。
+- 示例订单数据：内置 16 笔覆盖全部 6 种订单状态的演示订单，下单时间相对当前时刻偏移，保证任意时刻启动都能回答「近 7 天营收」「待接单数量」等问题。
+- DeepSeek API Key 通过环境变量注入，不写入仓库；未配置 Key 时面板给出明确提示，不影响项目其他功能。
+- 新增 16 个测试：SQL 校验器单测（10）、自纠错循环端到端单测（3，真实 H2 + 种子数据，LLM 用 Mockito 脚本化）、离线接口测试（3），测试总数从 9 增加到 25。
 
 ## v0.1.4 更新重点
 
@@ -53,6 +85,7 @@ v0.1.2 主要强化 Web 用户点餐端的交互体验：
 | 模块 | 技术 |
 | --- | --- |
 | 后端 | Spring Boot 2.7.18、Spring JDBC、H2、MySQL、Apache POI |
+| Agent | DeepSeek Chat Completions（function-calling）、RestTemplate、只读 SQL 安全校验 |
 | 前端 | React 19、Vite、多页面构建、motion |
 | 管理端图表 | ECharts 5.5.0 |
 | API 文档 | springdoc-openapi-ui 1.7.0 |
@@ -328,6 +361,10 @@ src/main/resources/application.yml
 | `OSS_ACCESS_KEY_ID` | 空 | 阿里云 AccessKey ID |
 | `OSS_ACCESS_KEY_SECRET` | 空 | 阿里云 AccessKey Secret |
 | `OSS_BUCKET_NAME` | 空 | OSS bucket |
+| `DEEPSEEK_API_KEY` | 空 | DeepSeek API Key（经营问答必填，也可在管理端「经营问答 → Agent 设置」直接填写） |
+| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | DeepSeek 兼容接口地址 |
+| `DEEPSEEK_MODEL` | `deepseek-v4-flash` | 经营问答使用的模型（可选 `deepseek-v4-flash` / `deepseek-v4-pro`，也可在管理端下拉框切换） |
+| `AGENT_KEY_FILE` | `.env` | API Key 与模型持久化文件路径（一般无需修改） |
 
 ### 切换 Redis
 
@@ -364,7 +401,7 @@ mvn -s maven-settings.xml spring-boot:run
 1. 创建数据库：
 
 ```sql
-CREATE DATABASE sky_take_out CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE snap_meal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 2. 设置环境变量：
@@ -373,7 +410,7 @@ CREATE DATABASE sky_take_out CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 $env:SPRING_PROFILES_ACTIVE="mysql"
 $env:MYSQL_HOST="localhost"
 $env:MYSQL_PORT="3306"
-$env:MYSQL_DATABASE="sky_take_out"
+$env:MYSQL_DATABASE="snap_meal"
 $env:MYSQL_USERNAME="root"
 $env:MYSQL_PASSWORD="你的MySQL密码"
 mvn -s maven-settings.xml spring-boot:run
@@ -413,6 +450,13 @@ src/main/resources/application-mysql.yml
 | `GET` | `/api/admin/reports/turnover` | 营业额统计 |
 | `GET` | `/api/admin/reports/sales-top10` | 销量排行 |
 | `GET` | `/api/admin/reports/export` | 导出 Excel |
+| `POST` | `/api/admin/agent/chat` | 经营问答：自然语言 → SQL → 只读执行 → 中文解释 |
+| `GET` | `/api/admin/agent/status` | 经营问答配置状态（是否配置 Key、模型名、脱敏 Key、保存位置） |
+| `GET` | `/api/admin/agent/key` | 获取当前 API Key 配置（脱敏） |
+| `POST` | `/api/admin/agent/key` | 保存 API Key（写入 `.env` 并即时生效） |
+| `POST` | `/api/admin/agent/key/test` | 测试 API Key 连通性（不保存） |
+| `GET` | `/api/admin/agent/model` | 获取当前模型与可选模型列表 |
+| `POST` | `/api/admin/agent/model` | 切换模型（写入 `.env` 并即时生效） |
 | `POST` | `/api/user/auth/login` | 用户登录 |
 | `GET` | `/api/user/catalog/categories` | 分类列表 |
 | `GET` | `/api/user/catalog/dishes?categoryId=1` | 菜品列表 |
@@ -447,6 +491,51 @@ frontend/src/pages/admin.jsx
 /api/admin/reports/turnover
 /api/admin/reports/sales-top10
 ```
+
+## 经营问答（Text2SQL Agent）
+
+管理端「经营问答」面板把自然语言经营问题转成可执行 SQL：
+
+```text
+自然语言问题 -> DeepSeek 生成 SQL -> 只读安全校验 -> 只读连接执行 -> 结果回传 -> 中文经营解释
+```
+
+### 使用方式
+
+1. 启动项目，登录管理端，点击左侧「经营问答」。
+2. 首次使用时，若未配置 Key，面板顶部「Agent 设置」卡片会自动展开：粘贴 DeepSeek API Key → 点击「测试连接」确认有效 → 点击「保存」。保存后立即生效，无需重启；Key 写入项目根目录 `.env`（已加入 `.gitignore`）。
+   - 也可以在启动前设置环境变量 `DEEPSEEK_API_KEY`（见「常用环境变量」表），两种方式等效。
+   - 同一张卡片内置**模型下拉框**，可在 `deepseek-v4-flash` / `deepseek-v4-pro` 间切换，保存后即时生效，重启仍保留。
+3. 输入问题并回车，面板会依次展示：中文解释、执行 SQL（含纠错次数）、查询结果表。
+
+可尝试的问题：
+
+```text
+- 最近7天营收多少？
+- 哪个菜卖得最好？
+- 有多少待接单订单？
+- 近30天已完成订单数是多少？
+```
+
+### 多轮自纠错循环
+
+- Agent 采用 function-calling，大模型通过 `run_query` 工具执行查询。
+- SQL 校验失败或执行失败时，错误信息会回传大模型自动修正，最多重试 3 次。
+- 连续失败会终止并提示换个问法，不会无限循环。
+
+### 只读 SQL 安全层
+
+`SqlSafetyValidator` 是查询前的唯一入口：
+
+- 仅允许单条 `SELECT`，拒绝多语句（分号拼接）。
+- 拒绝注释（`--`、`/* */`、`#`）绕过。
+- 拒绝 DDL/DML 关键字（INSERT/UPDATE/DELETE/DROP/ALTER/CREATE 等，按单词边界匹配，不影响 `updated_at` 这类列名）。
+- 拒绝 `into outfile`、`load_file`、`information_schema` 等危险内容。
+- 查询在只读连接上执行，带 10 秒超时与 200 行结果上限，返回给大模型的结果同样截断。
+
+### 示例订单数据
+
+`data.sql` 内置 16 笔演示订单（订单号 `SM...`），覆盖全部 6 种订单状态，下单时间相对当前时刻偏移，因此任何时刻启动都能回答「近 7 天营收」「待接单数量」等问题。
 
 ## 实验材料
 
@@ -557,6 +646,13 @@ http://localhost:8090/swagger-ui.html
 - [ ] Web 用户端"我的订单"可查看订单状态、取消待付款/待接单订单。
 - [ ] 管理端订单管理可按状态筛选、按订单号搜索、查看订单详情。
 - [ ] 管理端可完成接单、拒单（填原因）、取消（填原因）、派送、完成操作。
+- [ ] 设置 `DEEPSEEK_API_KEY` 后，管理端「经营问答」可用自然语言提问并返回中文解释与结果表。
+- [ ] 未设置 `DEEPSEEK_API_KEY` 时，经营问答面板显示明确提示，其他功能不受影响。
+- [ ] 在「经营问答 → Agent 设置」卡片填入 Key →「测试连接」校验 →「保存」后即时生效，重启服务后 Key 仍然有效（已持久化到 `.env`）。
+- [ ] 用占位符或空值保存 API Key 会被拒绝；未登录时访问 Key 接口返回 401。
+- [ ] 「Agent 设置」卡片模型下拉框可在 `deepseek-v4-flash` / `deepseek-v4-pro` 间切换，切换后即时生效，重启服务后模型仍然保留。
+- [ ] 提交不支持的模型（如已停用的 `deepseek-chat`）会被拒绝（400）。
+- [ ] 经营问答的回答按 Markdown 渲染：包含 `| 列 |` 的表格显示为真正的表格，加粗/列表/标题排版正常，不再出现原始 `|` 管道符。
 - [ ] 微信小程序可完成登录、浏览分类和菜品。
 - [ ] 微信小程序首页购物车弹层可展开、调整数量、清空购物车并进入结算。
 - [ ] 微信小程序可完成添加地址、结算、支付、查看订单。
