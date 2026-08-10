@@ -34,6 +34,8 @@ springdoc:
 sky:
   security:
     token-secret: ${TOKEN_SECRET:snap-meal-course-secret-change-in-production}
+  rate-limit:
+    orders-per-minute: ${ORDERS_PER_MINUTE:10}
   integrations:
     oss-mode: local
     redis-mode: ${REDIS_MODE:memory}

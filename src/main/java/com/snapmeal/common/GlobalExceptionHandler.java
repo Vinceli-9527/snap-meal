@@ -8,6 +8,8 @@ public class GlobalExceptionHandler {
     public ApiResponse<Void> unauthorized(UnauthorizedException e){return ApiResponse.fail(e.getMessage());}
     @ExceptionHandler(BusinessException.class) @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> business(BusinessException e){return ApiResponse.fail(e.getMessage());}
+    @ExceptionHandler(TooManyRequestsException.class) @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    public ApiResponse<Void> tooManyRequests(TooManyRequestsException e){return ApiResponse.fail(e.getMessage());}
     @ExceptionHandler(MethodArgumentNotValidException.class) @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> validation(MethodArgumentNotValidException e){return ApiResponse.fail(e.getBindingResult().getFieldErrors().get(0).getDefaultMessage());}
     @ExceptionHandler(Exception.class) @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)

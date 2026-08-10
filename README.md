@@ -9,8 +9,17 @@ Snap Meal 是一个用于 Java 软件开发实战课程的外卖业务示例项�
 - 管理端：管理员登录、分类管理、菜品管理、订单管理、经营概览、ECharts 图表仪表盘、Excel 报表导出、经营问答（Text2SQL Agent）。
 - Web 用户端：模拟手机号登录、模拟微信登录、分类浏览、菜品列表、购物车明细、数量调整、地址管理、下单和模拟支付。
 - 微信小程序用户端：登录、分类菜品浏览、首页购物车弹层、购物车数量调整、地址管理、结算、模拟支付、订单列表。
-- 后端能力：统一 REST API、token 鉴权、H2/MySQL 数据库、购物车数量调整、阿里云 OSS 可选上传、Redis 可选 token 存储、Swagger/OpenAPI 文档。
+- 后端能力：统一 REST API、token 鉴权、H2/MySQL 数据库、购物车数量调整、阿里云 OSS 可选上传、Redis 可选 token 存储与菜品列表缓存、Bucket4j 下单限流、Swagger/OpenAPI 文档。
 - 实验材料：版本归档、实验报告、外部工具使用文档、Postman Collection 模板。
+
+## v0.1.8 更新重点
+
+v0.1.8 为后端补上「缓存 + 限流」两块高可用基础能力，并让可选的 Redis 从 token 存储扩展到业务数据缓存：
+
+- **Redis 菜品列表缓存**：菜品列表查询（`/api/admin/dishes`、`/api/user/catalog/dishes`）接入 `CatalogCache`——启用 Redis 时优先读 Redis（TTL 5 分钟），未启用或 Redis 不可用时自动降级到本地内存缓存；新增/编辑/删除/上下架菜品等写操作会按缓存前缀失效（Redis SCAN + DEL，内存模式按前缀移除），保证缓存与数据库一致。
+- **Bucket4j 令牌桶下单限流**：`POST /api/user/orders` 提交订单接口引入令牌桶限流，按用户隔离（未登录按 IP），每分钟允许次数可用 `ORDERS_PER_MINUTE` 配置（默认 10），超限返回 HTTP 429；闲置桶自动回收，避免内存无限增长。
+- **依赖说明**：Bucket4j 使用 `com.github.vladimir-bukhtoyarov:bucket4j-core:7.0.0`（Java 8 兼容版本；`com.bucket4j` 新坐标的 7.6.1 是 Java 11 字节码，与项目 JDK 8 不符）。
+- 新增 8 个测试：CatalogCache 缓存命中/前缀失效/Redis 读写单测（4）、RateLimitInterceptor 限流单测（3）、下单限流集成测试（1，同一用户第 3 次提交订单返回 429），测试总数从 57 增加到 65。
 
 ## v0.1.7 更新重点
 
@@ -89,7 +98,8 @@ v0.1.2 主要强化 Web 用户点餐端的交互体验：
 | 前端 | React 19、Vite、多页面构建、motion |
 | 管理端图表 | ECharts 5.5.0 |
 | API 文档 | springdoc-openapi-ui 1.7.0 |
-| 缓存 | Redis，可选启用 |
+| 缓存 | Redis，可选启用（token 存储 + 菜品列表缓存） |
+| 接口限流 | Bucket4j 令牌桶（下单接口） |
 | 文件存储 | 本地 uploads 目录，或阿里云 OSS |
 | 小程序 | 微信小程序原生 WXML/WXSS/JS |
 | 构建工具 | Maven、npm |
@@ -107,6 +117,8 @@ sky-lab/
   releases/v0.1.0/                 v0.1.0 源码归档
   releases/v0.1.2/                 v0.1.2 源码归档
   releases/v0.1.3/                 v0.1.3 源码归档
+  releases/v0.1.7/                 v0.1.7 源码归档
+  releases/v0.1.8/                 v0.1.8 源码归档
   package.json                      根目录前端构建代理脚本
   pom.xml                           Maven 后端配置
   maven-settings.xml                Maven 镜像配置
@@ -356,6 +368,7 @@ src/main/resources/application.yml
 | `REDIS_HOST` | `localhost` | Redis 地址 |
 | `REDIS_PORT` | `6379` | Redis 端口 |
 | `REDIS_PASSWORD` | 空 | Redis 密码 |
+| `ORDERS_PER_MINUTE` | `10` | 下单接口每分钟允许的请求数（Bucket4j 令牌桶容量） |
 | `OSS_MODE` | `local` | `local` 或 `oss` |
 | `OSS_ENDPOINT` | 空 | 阿里云 OSS endpoint |
 | `OSS_ACCESS_KEY_ID` | 空 | 阿里云 AccessKey ID |
@@ -377,7 +390,7 @@ $env:REDIS_PORT="6379"
 mvn -s maven-settings.xml spring-boot:run
 ```
 
-Redis 不可用时，token 会自动降级到内存和数据库兼容逻辑，不阻止项目启动。
+Redis 不可用时，token 会自动降级到内存和数据库兼容逻辑，不阻止项目启动；菜品列表缓存由同一 `redis-mode` 开关控制，Redis 不可用时同样自动降级到本地内存缓存（5 分钟 TTL）兜底。
 
 ### 切换阿里云 OSS
 
@@ -574,6 +587,14 @@ releases/v0.1.3/RELEASE.md
 releases/v0.1.4/snap-meal-v0.1.4-source-20260802.zip
 releases/v0.1.4/snap-meal-v0.1.4-source-20260802.sha256.txt
 releases/v0.1.4/RELEASE.md
+
+releases/v0.1.7/snap-meal-v0.1.7-source-20260810.zip
+releases/v0.1.7/snap-meal-v0.1.7-source-20260810.sha256.txt
+releases/v0.1.7/RELEASE.md
+
+releases/v0.1.8/snap-meal-v0.1.8-source-20260810.zip
+releases/v0.1.8/snap-meal-v0.1.8-source-20260810.sha256.txt
+releases/v0.1.8/RELEASE.md
 ```
 
 归档为源码快照，不包含本地依赖、运行期数据库、构建缓存和日志。
@@ -642,7 +663,8 @@ http://localhost:8090/swagger-ui.html
 - [ ] 管理端可导出运营报表。
 - [ ] Web 用户端可登录、浏览分类和菜品。
 - [ ] Web 用户端可加入购物车、展开购物车面板并调整数量。
-- [ ] Web 用户端可完成下单和模拟支付。
+- [ ] Web 用户端可完成下单和模拟支付；连续下单第 3 次被限流返回 429（把 `ORDERS_PER_MINUTE` 调低后验证）。
+- [ ] 菜品列表首次访问走数据库，再次访问命中缓存（Redis 模式可 `redis-cli keys 'dish:*'` 查看缓存键；改/删菜品后缓存失效）。
 - [ ] Web 用户端"我的订单"可查看订单状态、取消待付款/待接单订单。
 - [ ] 管理端订单管理可按状态筛选、按订单号搜索、查看订单详情。
 - [ ] 管理端可完成接单、拒单（填原因）、取消（填原因）、派送、完成操作。
