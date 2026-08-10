@@ -146,10 +146,10 @@ mvn -version
 
 ## 快速启动
 
-进入项目根目录：
+进入项目根目录（以你实际存放项目代码的目录为准）：
 
 ```powershell
-cd "C:\Users\Vince\Desktop\java\sky-lab"
+cd <项目根目录>
 ```
 
 运行后端测试：
