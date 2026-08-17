@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** SqlSafetyValidator 纯离线单测：只读白名单与注入防护。 */
+/** SqlSafetyValidator 纯离线单测：只读白名单、注入防护与业务表白名单。 */
 class SqlSafetyValidatorTest {
 
     private final SqlSafetyValidator validator = new SqlSafetyValidator();
@@ -85,9 +85,37 @@ class SqlSafetyValidatorTest {
 
     @Test
     void rejectsDangerousFunctionsAndFragments() {
-        assertRejected("select load_file('/etc/passwd')", "load_file");
-        assertRejected("select * from orders into outfile '/tmp/x'", "outfile");
+        assertRejected("select load_file('/etc/passwd')", "LOAD_FILE");
+        assertRejected("select * from orders into outfile '/tmp/x'", "INTO");
         assertRejected("select * from information_schema.tables", "information_schema");
+    }
+
+    @Test
+    void rejectsFileReadAndHazardFunctions() {
+        assertRejected("select * from csvread('C:/Windows/win.ini')", "CSVREAD");
+        assertRejected("select file_read('/etc/passwd')", "FILE_READ");
+        assertRejected("select sleep(5)", "SLEEP");
+        assertRejected("select benchmark(10000000, md5(1))", "BENCHMARK");
+        assertRejected("select get_lock('lock1', 5)", "GET_LOCK");
+        assertRejected("select * from orders for update", "UPDATE");
+        assertRejected("select * from orders into backup_orders", "INTO");
+    }
+
+    @Test
+    void rejectsUnknownTables() {
+        assertRejected("select * from employee", "未知表");
+        assertRejected("select * from mysql.user", "未知表");
+        assertRejected("select * from auth_session", "未知表");
+    }
+
+    @Test
+    void acceptsBusinessTables() {
+        assertValid("select o.* from orders o join order_detail d on d.order_id = o.id");
+        assertValid("select u.phone, u.nickname from app_user u");
+        assertValid("select s.name from setmeal s join setmeal_dish sd on sd.setmeal_id = s.id");
+        assertValid("select * from address_book where user_id = 1");
+        assertValid("select * from shopping_cart");
+        assertValid("select count(*) from shop_state");
     }
 
     @Test

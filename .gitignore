@@ -8,6 +8,7 @@
 *.log
 /output/
 /.claude/
+/.tmp-docx-check/
 /frontend/node_modules/
 /frontend/dist/
 codex-prompts.txt

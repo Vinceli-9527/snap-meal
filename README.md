@@ -12,7 +12,19 @@ Snap Meal 是一个用于 Java 软件开发实战课程的外卖业务示例项�
 - 后端能力：统一 REST API、token 鉴权、H2/MySQL 数据库、购物车数量调整、阿里云 OSS 可选上传、Redis 可选 token 存储与菜品列表缓存、Bucket4j 下单限流、Swagger/OpenAPI 文档。
 - 实验材料：版本归档、实验报告、外部工具使用文档、Postman Collection 模板。
 
+## v0.1.9 更新重点
+
+v0.1.9 针对上一轮安全审查发现的 4 处「非预期实现缺陷」做定向加固（既有演示设定：默认口令、无验证码登录、mock 支付/微信等原样保留，不受影响）：
+
+- **上传校验加固（U1）**：`OssService` 在 Content-Type 白名单之外，新增扩展名白名单（.jpg/.jpeg/.png/.webp）与图片魔数（Magic Number）嗅探（JPEG/PNG/WebP 文件头），保存文件名不再信任原始扩展名——杜绝「伪装成图片的 .html/.svg 脚本」经 `/uploads/**` 同源直出造成存储型 XSS。
+- **Text2SQL 校验器加固（U2）**：`SqlSafetyValidator` 新增 H2/MySQL 危险函数与写操作黑名单（CSVREAD/CSVWRITE/FILE_READ/SLEEP/BENCHMARK/GET_LOCK/RELEASE_LOCK/PG_SLEEP/WAITFOR/SHUTDOWN、SELECT INTO、SELECT FOR UPDATE 等），并新增业务表白名单——Agent 仅可查询 orders/order_detail/dish/category/app_user/setmeal/setmeal_dish/address_book/shop_state/shopping_cart，无法读取 employee（含口令）、auth_session（token 哈希）等敏感表。
+- **异常信息脱敏（U3）**：`GlobalExceptionHandler` 对未处理异常仅返回通用文案「服务器内部错误，请稍后重试」，异常详情写入服务端日志，不再把 SQL 错误/内部路径/第三方服务细节回显给前端。
+- **H2 配置收敛（U4）**：默认连接串移除 `AUTO_SERVER=TRUE`，不再在 localhost 开放无鉴权 TCP 端口；单进程演示不受影响。
+- **其他**：`.gitignore` 增补 `/.tmp-docx-check/`；保留本机已有的 CORS 全开与 OPTIONS 预检放行（演示便利）。
+- 新增 10 个测试：SqlSafetyValidator 危险函数/未知表/业务表白名单（3）、OssService 上传校验（7），测试总数从 65 增加到 75。
+
 ## v0.1.8 更新重点
+
 
 v0.1.8 为后端补上「缓存 + 限流」两块高可用基础能力，并让可选的 Redis 从 token 存储扩展到业务数据缓存：
 

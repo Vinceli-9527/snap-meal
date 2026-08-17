@@ -21,6 +21,7 @@ import java.util.UUID;
 @Service
 public class OssService {
     private static final Set<String> ALLOWED = new HashSet<>(Arrays.asList("image/jpeg", "image/png", "image/webp"));
+    private static final Set<String> ALLOWED_EXT = new HashSet<>(Arrays.asList(".jpg", ".jpeg", ".png", ".webp"));
     private final String mode;
     private final String endpoint;
     private final String accessKeyId;
@@ -48,6 +49,25 @@ public class OssService {
     private void validate(MultipartFile file) {
         if (file.isEmpty()) throw new BusinessException("请选择图片");
         if (!ALLOWED.contains(file.getContentType())) throw new BusinessException("仅支持 JPG、PNG 或 WebP 图片");
+        String original = file.getOriginalFilename();
+        String ext = original != null && original.contains(".") ? original.substring(original.lastIndexOf('.')).toLowerCase() : "";
+        if (!ALLOWED_EXT.contains(ext)) throw new BusinessException("仅支持 JPG、PNG 或 WebP 图片");
+        if (sniffImageType(file) == null) throw new BusinessException("图片内容校验失败，仅支持 JPG、PNG 或 WebP");
+    }
+
+    /** 按文件头魔数识别真实图片类型：JPEG(FF D8 FF)、PNG(89 50 4E 47)、WebP(RIFF....WEBP)；识别失败返回 null。 */
+    private static String sniffImageType(MultipartFile file) {
+        try {
+            byte[] head = file.getBytes();
+            if (head.length < 12) return null;
+            if ((head[0] & 0xFF) == 0xFF && (head[1] & 0xFF) == 0xD8 && (head[2] & 0xFF) == 0xFF) return "jpg";
+            if ((head[0] & 0xFF) == 0x89 && head[1] == 'P' && head[2] == 'N' && head[3] == 'G') return "png";
+            if (head[0] == 'R' && head[1] == 'I' && head[2] == 'F' && head[3] == 'F'
+                    && head[8] == 'W' && head[9] == 'E' && head[10] == 'B' && head[11] == 'P') return "webp";
+            return null;
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     private Map<String, String> uploadToLocal(MultipartFile file) throws IOException {
@@ -79,8 +99,9 @@ public class OssService {
     }
 
     private String buildFileName(MultipartFile file) {
-        String original = file.getOriginalFilename();
-        String ext = original != null && original.contains(".") ? original.substring(original.lastIndexOf('.')) : ".bin";
+        // 扩展名以魔数识别结果为准，不信任原始文件名
+        String sniffed = sniffImageType(file);
+        String ext = sniffed == null ? ".bin" : "." + sniffed;
         return UUID.randomUUID().toString().replace("-", "") + ext;
     }
 
